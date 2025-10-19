@@ -115,6 +115,8 @@ MSG_TARGET = os.getenv('MSG_TARGET').split(',')
 TELEGRAM_BOT_CODE= os.getenv('TELEGRAM_BOT_CODE')
 TELEGRAM_CHAT_ID= os.getenv('TELEGRAM_CHAT_ID')
 
+YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
+
 # print('AWS_STORAGE_BUCKET_NAME', AWS_STORAGE_BUCKET_NAME)
 # print('AWS_S3_IMAGE_UPLOAD_TO', AWS_S3_IMAGE_UPLOAD_TO)
 
@@ -144,6 +146,7 @@ INSTALLED_APPS = [
     # user는 DB를 분리할 수 없음. 빼면 오류남.
     'user',
     'main',
+    'youtube',
 ]
 
 MIDDLEWARE = [

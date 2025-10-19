@@ -44,8 +44,8 @@ class Command(BaseCommand):
         """ Do your work here """
         self.options = options
         print(options['worker'])
-        module = importlib.import_module(f'{options["baseapp"]}.workers.' + options['worker'])
-        worker_loaded = getattr(module, options['worker'])
-        worker = worker_loaded(Namespace(**options))
-        print(worker)
-        worker.run()
+        # module = importlib.import_module(f'{options["baseapp"]}.workers.' + options['worker'])
+        # worker_loaded = getattr(module, options['worker'])
+        # worker = worker_loaded(Namespace(**options))
+        # print(worker)
+        # worker.run()
