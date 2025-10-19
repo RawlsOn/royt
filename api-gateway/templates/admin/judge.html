@@ -1,0 +1,345 @@
+
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="ROBOTS" content="NOINDEX, NOFOLLOW">
+
+<meta name="author" content="LandUp">
+<title>V심사</title>
+
+<!-- Favicon -->
+<link rel="icon" href="https://myhomefunding.co.kr/favicon.ico" type="image/png">
+<meta name="description" content="V심사">
+
+  <!-- Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="https://storage.googleapis.com/rawlson/woodae/logo/landup_logo_square_64.jpg?v=2">
+
+  <link rel="stylesheet" href="https://storage.googleapis.com/roboard/assets/vendor/nucleo/css/nucleo.css" type="text/css">
+  <link rel="stylesheet" href="https://storage.googleapis.com/roboard/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" type="text/css">
+  <!-- Page plugins -->
+  <link rel="stylesheet" href="https://storage.googleapis.com/roboard/assets/vendor/animate.css/animate.min.css">
+  <link rel="stylesheet" href="https://storage.googleapis.com/roboard/assets/vendor/sweetalert2/dist/sweetalert2.min.css">
+  <!-- Argon CSS -->
+  <link rel="stylesheet" href="https://storage.googleapis.com/roboard/assets/css/argon.css?v=1.2.0" type="text/css">
+
+  <link href="https://storage.googleapis.com/newklit/static/node_modules/notyf/notyf.min.css" rel="stylesheet">
+
+
+</head>
+
+<body oncopy="return false" oncut="return false" onpaste="return false" class="unselectable">
+
+
+  <div class="main-content p-3" id="mainapp" style="background-color: white; max-width: 720px; margin: 50px auto;">
+  	<div class='title'>
+      <img style='width: 40px; height: 40px;' src="https://vftech-public.s3.ap-northeast-2.amazonaws.com/vfunding/img/vlogo.png" />
+      <h1>VAIS 심사</h1>
+    </div>
+<table class="table border top_table" width="100%">
+  <tbody>
+    <tr>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+    </tr>
+    <tr>
+      <th colspan="2">신청인</th>
+      <td colspan="8">{{data.신청인}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">연락처</th>
+      <td colspan="8">{{data.연락처}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">물건주소</th>
+      <td colspan="8">{{data.물건주소}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">선순위대출액</th>
+      <td colspan="8">{{data.선순위대출액}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">동호수</th>
+      <td colspan="8">{{data.동}}동 {{data.호}}호</td>
+    </tr>
+    <tr>
+      <th colspan="2">면적</th>
+      <th colspan="2" id="lightOrange">공급면적</th>
+      <td colspan="2">{{data.공급면적}}</td>
+      <th colspan="2" id="lightOrange">전용면적</th>
+      <td colspan="2">{{data.전용면적}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">총세대수</th>
+      <td colspan="8">{{data.총세대수}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">KB시세(상한가)</th>
+      <td colspan="8">{{data.KB시세_상한가}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">KB시세(일반가)</th>
+      <td colspan="8">{{data.KB시세_일반가}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">KB시세(하한가)</th>
+      <td colspan="8">{{data.KB시세_하한가}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">적용시세</th>
+      <td colspan="8">{{data.적용시세}}</td>
+    </tr>
+    <tr>
+      <th colspan="2">KB 링크</th>
+      <td colspan="8"><a href="{{data.KB_링크}}" target="_blank">{{data.KB_링크}}</a></td>
+    </tr>
+    <tr>
+      <th colspan="2" rowspan="{{data.실거래가_rowspan}}">동면적 실거래가<br></th>
+      <th colspan="4">거래일자</th>
+      <th colspan="4">실거래가</th>
+    </tr>
+    {% for datum in data.실거래가_list %}
+    <tr>
+      <td colspan="4">{{ datum.기준년월_han }}</td>
+      <td colspan="4">{{ datum.매매실거래금액_han }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+      <th colspan="2" rowspan="4">평균 실거래가<br>(KB 기반)</th>
+      <th colspan="2" id="lightOrange">최근 1개월</th>
+      <td colspan="2">{{data.평균실거래가.최근_01개월.avg}}</td>
+      <th colspan="2" id="lightOrange">건수</th>
+      <td colspan="2">{{data.평균실거래가.최근_01개월.count}}</td>
+    </tr>
+    <tr>
+      <th colspan="2" id="lightOrange">최근 6개월</th>
+      <td colspan="2">{{data.평균실거래가.최근_06개월.avg}}</td>
+      <th colspan="2" id="lightOrange">건수</th>
+      <td colspan="2">{{data.평균실거래가.최근_06개월.count}}</td>
+    </tr>
+    <tr>
+      <th colspan="2" id="lightOrange">최근 12개월</th>
+      <td colspan="2">{{data.평균실거래가.최근_12개월.avg}}</td>
+      <th colspan="2" id="lightOrange">건수</th>
+      <td colspan="2">{{data.평균실거래가.최근_12개월.count}}</td>
+    </tr>
+    <tr>
+      <th colspan="2" id="lightOrange">최근 24개월</th>
+      <td colspan="2">{{data.평균실거래가.최근_24개월.avg}}</td>
+      <th colspan="2" id="lightOrange">건수</th>
+      <td colspan="2">{{data.평균실거래가.최근_24개월.count}}</td>
+    </tr>
+
+    <tr>
+      <th colspan="2" rowspan='2'>평균 낙찰가율<br>(6개월)</th>
+      <th colspan="2">월별</th>
+      <th colspan="2">진행건수</th>
+      <th colspan="2">낙찰건수</th>
+      <th colspan="2">낙찰가율</th>
+
+    <tr>
+      <td colspan="10"><h2 style="text-align: center;">TBD</h2></td>
+    </tr>
+
+    </tr>
+  </tbody>
+</table>
+<table class='working_table' width="100%">
+  <tbody class="table border">
+
+    <tr>
+      <th colspan="10"><h3>ML Pred Value (예상낙찰가)</h3></th>
+    </tr>
+
+    <tr>
+      <th colspan="4" rowspan="2" width="50%">Forecasting 1 month</th>
+      <th colspan="2" id="lightOrange">Point Estimation</th>
+      <td colspan="2" id="white">{{data.prediction.평균가격}}</td>
+    </tr>
+
+    <tr>
+      <th colspan="1" id="lightOrange">Min</th>
+      <td colspan="2" id="white">
+        5% Prediction Interval<br>
+        <strong>{{data.prediction.fore_1_month_min}}</strong>
+      </td>
+      <th colspan="1" id="lightOrange">Max</th>
+      <td colspan="2" id="white">
+        95% Prediction Interval<br>
+        <strong>{{data.prediction.fore_1_month_max}}</strong>
+      </td>
+    </tr>
+
+    <tr>
+      <th colspan="4" width="30%">Forecasting 4 months</th>
+      <th colspan="1" id="lightOrange">Min</th>
+      <td colspan="2" id="white">
+        5% Prediction Interval<br>
+        <strong>{{data.prediction.fore_4_month_min}}</strong>
+      </td>
+      <th colspan="1" id="lightOrange">Max</th>
+      <td colspan="2" id="white">
+        95% Prediction Interval<br>
+        <strong>{{data.prediction.fore_4_month_max}}</strong>
+      </td>
+    </tr>
+
+    <tr>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+      <td width="10%"></td>
+    </tr>
+
+<!--     <tr>
+      <th colspan="2">예상낙찰가</th>
+      <th colspan="1" id="lightOrange">Pred(5%)</th>
+      <td colspan="3" id="white">777,777,777</td>
+      <th colspan="1" id="lightOrange">Pred(95%)</th>
+      <td colspan="3" id="white">888,888,888</td>
+    </tr>
+ -->
+<!--     <tr>
+      <th colspan="2">LTV</th>
+      <th colspan="1" id="lightOrange">85%</th>
+      <td colspan="2" id="white">850,000,000</td>
+      <th colspan="1" id="lightOrange">80%</th>
+      <td colspan="1" id="white">800,000,000</td>
+      <th colspan="1" id="lightOrange">75%</th>
+      <td colspan="2" id="white">750,000,000</td>
+    </tr>
+
+    <tr>
+      <th colspan="2">예상최대한도</th>
+      <th colspan="8">777,777,777원</th>
+    </tr>
+ -->
+  </tbody>
+</table>
+
+<pre>{{data.total_실거래가_list_text}}</pre>
+
+  </div>
+
+    <!-- Argon Scripts -->
+  <!-- Core -->
+  <script src="https://storage.googleapis.com/roboard/assets/vendor/jquery/dist/jquery.min.js"></script>
+  <script src="https://storage.googleapis.com/roboard/assets/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://storage.googleapis.com/roboard/assets/vendor/js-cookie/js.cookie.js"></script>
+  <script src="https://storage.googleapis.com/roboard/assets/vendor/jquery.scrollbar/jquery.scrollbar.min.js"></script>
+  <script src="https://storage.googleapis.com/roboard/assets/vendor/jquery-scroll-lock/dist/jquery-scrollLock.min.js"></script>
+  <!-- Optional JS -->
+  <script src="https://storage.googleapis.com/roboard/assets/vendor/chart.js/dist/Chart.min.js"></script>
+  <script src="https://storage.googleapis.com/roboard/assets/vendor/chart.js/dist/Chart.extension.js"></script>
+  <script src="https://storage.googleapis.com/roboard/assets/vendor/sweetalert2/dist/sweetalert2.min.js"></script>
+
+<script src="https://storage.googleapis.com/roboard/assets/js/components/vendor/notyf.min.js"></script>
+<script src="https://storage.googleapis.com/roboard/assets/js/components/vendor/axios.min.js"></script>
+<script src="https://storage.googleapis.com/roboard/assets/js/components/vendor/vue.min.js"></script>
+<script src="https://storage.googleapis.com/roboard/assets/js/components/vendor/vuex.min.js"></script>
+
+
+<script type="module">
+
+new Vue({
+  el: '#mainapp',
+  data: {
+  },
+  computed: {
+    get() {
+      // return this.$store.state.get
+    },
+    pre_loan_amount() {
+    	return data.user_apply.pre_loan_amount
+    }
+  },
+  methods: {
+    clickShare(report_url) {
+    },
+    clickHideToday () {
+      localStorageSet('hideTodayNow', +new Date())
+    }
+  },
+  created: function() {
+    console.log('created')
+  },
+  mounted: function() {
+  	console.log('mounted')
+  }
+})
+
+$(document).ready(function() {
+
+
+  // $('.dropdown-item').click(function(){
+
+  // };
+})
+</script>
+<style>
+  body {
+    background-color: #ffd78d;
+  }
+
+  #mainapp {
+    border-radius: 20px;
+  }
+
+  .title {
+    display: flex;
+    justify-content: center;
+  }
+
+  .working_table {
+    border: 4px solid #ff9100;
+    background-color: #ffe8be;
+  }
+
+  .top_table th {
+    color: white;
+    text-align: center;
+    border: 1px solid white;
+    background-color: #ff9100;
+  }
+
+  .top_table #lightOrange {
+    background-color: #ffc457;
+  }
+
+  .working_table #lightOrange {
+    background-color: #ffc457;
+  }
+
+  .working_table #white {
+    background-color: #ffe8be;
+  }
+
+  .working_table th {
+    background-color: #ff9100;
+    text-align: center;
+    border: 1px solid white;
+  }
+</style>
+
+</body>
+
+</html>

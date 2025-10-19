@@ -1,0 +1,54 @@
+FROM python:3.10-slim
+MAINTAINER Intersources Inc.
+
+SHELL ["/bin/bash", "-cu"]
+RUN echo 'alias ll="ls -la"' >> ~/.bashrc
+
+ARG PROJECT_NAME
+RUN echo "export PS1='🐳 \e[0;34m$PROJECT_NAME\e[0m \w # '" >> ~/.bashrc
+
+# set timezone
+ENV TZ Asia/Seoul
+
+# set work directory
+WORKDIR /usr/src/api-gateway
+
+# cron
+COPY ./docker-cron /etc/cron.d/docker-cron
+
+# # make log dir
+# RUN mkdir -p /usr/log
+RUN apt-get update
+
+# # mysql
+# RUN apt-get install python3-dev default-libmysqlclient-dev gcc  -y
+
+# RUN apt-get install cron curl vim -y
+
+# # sqlite3
+# RUN apt-get install libproj-dev -y
+# RUN apt-get update && \
+# 	DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install sqlite3=3.*
+
+# # spatialite
+# RUN apt-get install -y spatialite-bin libsqlite3-mod-spatialite binutils gdal-bin && \
+# 	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+# 	mkdir -p /root/db
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# install dependencies
+RUN pip install --upgrade pip
+COPY ./requirements.txt .
+RUN pip install -r requirements.txt
+
+# copy project
+# COPY . .
+
+# copy entrypoint.sh
+# COPY ./docker/entrypoint.local.sh .
+
+# run entrypoint.sh
+# ENTRYPOINT ["/usr/src/api-gateway/docker/entrypoint.local.sh"]

@@ -1,0 +1,53 @@
+FROM python:3.10-slim
+MAINTAINER Intersources Inc.
+
+SHELL ["/bin/bash", "-cu"]
+RUN echo 'alias ll="ls -la"' >> ~/.bashrc
+
+# set timezone
+ENV TZ Asia/Seoul
+
+# set work directory
+WORKDIR /usr/src/api-gateway
+
+
+# # make log dir
+# RUN mkdir -p /usr/log
+
+# for debuging
+RUN apt-get update
+RUN apt-get install curl -y
+RUN apt-get install vim -y
+
+# ps
+RUN apt-get install procps -y
+
+# sqlite3
+RUN apt-get install libproj-dev -y
+RUN apt-get update && \
+	DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install sqlite3=3.*
+
+# spatialite
+RUN apt-get install -y spatialite-bin libsqlite3-mod-spatialite binutils gdal-bin && \
+	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+	mkdir -p /root/db
+
+RUN mkdir -p /usr/data/robasev2/
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# install dependencies
+RUN pip install --upgrade pip
+COPY ./requirements.txt .
+RUN pip install -r requirements.txt
+
+# copy project
+# COPY . .
+
+# copy entrypoint.sh
+# COPY ./docker/entrypoint.local.sh .
+
+# run entrypoint.sh
+# ENTRYPOINT ["/usr/src/api-gateway/docker/entrypoint.local.sh"]

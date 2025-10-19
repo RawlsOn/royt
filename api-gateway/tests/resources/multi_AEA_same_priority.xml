@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<AEAT xmlns="tag:atsc.org,2016:XMLSchemas/ATSC3/Delivery/AEAT/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="tag:atsc.org,2016:XMLSchemas/ATSC3/Delivery/AEAT/1.0/AEAT-1.0-20170920.xsd">
+	<AEA aeaId="KR.T10107-2021900341_HRW_1" issuer="통합예경보플랫폼" audience="public" aeaType="alert" priority="3" wakeup="false">
+		<Header>
+			<EventCode type="KR.eventCode">HRW</EventCode>
+			<EventDesc xml:lang="ko-KR">호우 경보 발표</EventDesc>
+			<EventDesc xml:lang="en-US">호우 경보 발표</EventDesc>
+			<EventDesc xml:lang="ja-JP">호우 경보 발표</EventDesc>
+			<EventDesc xml:lang="zh-CN">호우 경보 발표</EventDesc>
+			<EventDesc xml:lang="vi">호우 경보 발표</EventDesc>
+			<Location type="KR.areaCode">1100000000</Location>
+		</Header>
+		<AEAText xml:lang="ko-KR">테스트[행정안전부] 오늘 16시 서울 호우 경보 발령. 저지대, 침수 우려지역 등 위험지역에서는 가족, 이웃과 정보를 공유하고 안전한 곳으로 대피하시기 바랍니다.</AEAText>
+		<AEAText xml:lang="en-US">[Ministry of the Interior and Safety] Heavy Rain Warning Seoul at 16. Residents in flood risk areas EVAC to safety</AEAText>
+		<AEAText xml:lang="ja-JP">[行政安全部]本日16時 ソウル特別市豪雨警報発令。低地帯、浸水想定区域など危険地域では家族、近所の住民と情報を共有し安全な場所へ避難してください。</AEAText>
+		<AEAText xml:lang="zh-CN">[行政安全部] 今天16时 首尔特别市 发布暴雨警报。 在低洼地区，可能被洪水淹没的潜在危险地区，请与您的家人和邻居共享信息，并撤离到安全地方。</AEAText>
+		<AEAText xml:lang="vi">[Bộ Hành chính và An toàn] Cảnh báo mưa lớn @AREADESC.vn lúc 16h. Tại khu vực địa hình thấp, có nguy cơ ngập cần sơ tán đến nơi an toàn</AEAText>
+		<AEAVoiceText xml:lang="ko-KR">테스트10월 06일 16시 서울 호우 경보를 발령합니다. 저지대, 침수 우려지역 등 위험지역에서는 가족, 이웃과 정보를 공유하고 안전한 곳으로 대피하시기 바랍니다.</AEAVoiceText>
+		<AEAVoiceText xml:lang="en-US">Seoul at 16 10 06. Heavy Rain Warning Residents in flood risk areas evacuate to safety</AEAVoiceText>
+		<LiveMedia bsid="1041" serviceId="9">
+			<ServiceName xml:lang="ko-KR">KBS UHD 1</ServiceName>
+		</LiveMedia>
+		<Media mediaDesc="지도 이미지" url="KR.T10107-2021900341_HRW_1_MAP_0000000000.png" alternateUrl="http://122.199.200.224:9110/noti/2021/KR.T10107-2021900341_HRW_1/IMG/KR.T10107-2021900341_HRW_1_MAP_0000000000.png" contentType="image/png"/>
+		<Media mediaDesc="영문음성파일" url="voice_en.wav" alternateUrl="http://122.199.200.224:9110/noti/2021/KR.T10107-2021900341_HRW_1/VMS/voice_en.wav" contentType="audio/x-wav"/>
+		<Media mediaDesc="심볼 이미지" url="symbol_HRW.png" alternateUrl="http://122.199.200.224:9110/noti/SYMBOL/symbol_HRW.png" contentType="image/png"/>
+		<Media mediaDesc="한글음성파일" url="voice.wav" alternateUrl="http://122.199.200.224:9110/noti/2021/KR.T10107-2021900341_HRW_1/VMS/voice.wav" contentType="audio/x-wav"/>
+	</AEA>
+	<AEA aeaId="KR.T10105-2021900371_TPW_1" issuer="통합예경보플랫폼" audience="public" aeaType="alert" priority="3" wakeup="false">
+		<Header>
+			<EventCode type="KR.eventCode">TPW</EventCode>
+			<EventDesc xml:lang="ko-KR">태풍 경보 발표</EventDesc>
+			<EventDesc xml:lang="en-US">태풍 경보 발표</EventDesc>
+			<EventDesc xml:lang="ja-JP">태풍 경보 발표</EventDesc>
+			<EventDesc xml:lang="zh-CN">태풍 경보 발표</EventDesc>
+			<EventDesc xml:lang="vi">태풍 경보 발표</EventDesc>
+			<Location type="KR.areaCode">1100000000</Location>
+		</Header>
+		<AEAText xml:lang="ko-KR">테스트[행정안전부] 오늘 16시 서울 태풍 경보 발령. 태풍 관련 정보를 공유하고, 하천, 해안가 등 위험지역 접근금지. 논밭 관리행위 자제 등 안전에 주의 바랍니다.</AEAText>
+		<AEAText xml:lang="en-US">[Ministry of the Interior and Safety] Seoul at 16 Typhoon Warning. DO NOT approach risk areas and keep to safety</AEAText>
+		<AEAText xml:lang="ja-JP">[行政安全部]本日16時 ソウル特別市で台風警報発令。台風関連の情報を共有し、河川、海岸付近など危険地域への接近禁止。田畑の管理行為自制など安全に注意してください。</AEAText>
+		<AEAText xml:lang="zh-CN">[行政安全部] 今天16时 首尔特别市 发布台风警报。 共享与台风有关的信息，请注意安全，禁止进入危险区域，例如河川，海岸地区等，以及避免管理稻田。</AEAText>
+		<AEAText xml:lang="vi">[Bộ Hành chính và An toàn] Cảnh báo bão Không dến  nơi nguy hiểm như sông suối, bãi biển. Chú ý an toàn, giảm hoạt động tại đồng ruộng</AEAText>
+		<AEAVoiceText xml:lang="ko-KR">테스트10월 06일 16시 서울에 태풍 경보를 발령합니다. 태풍 관련 정보를 공유하고, 하천, 해안가 등 위험지역 접근금지. 논밭 관리행위 자제 등 안전에 주의 바랍니다.</AEAVoiceText>
+		<AEAVoiceText xml:lang="en-US">Seoul at 16 10 06 Typhoon Warning. DO NOT approach risk areas (stream/shoreline) and keep so safety</AEAVoiceText>
+		<LiveMedia bsid="1041" serviceId="9">
+			<ServiceName xml:lang="ko-KR">KBS UHD 1</ServiceName>
+		</LiveMedia>
+		<Media mediaDesc="영문음성파일" url="voice_en.wav" alternateUrl="http://122.199.200.224:9110/noti/2021/KR.T10105-2021900371_TPW_1/VMS/voice_en.wav" contentType="audio/x-wav" contentLength="225804"/>
+		<Media mediaDesc="한글음성파일" url="voice.wav" alternateUrl="http://122.199.200.224:9110/noti/2021/KR.T10105-2021900371_TPW_1/VMS/voice.wav" contentType="audio/x-wav" contentLength="454098"/>
+		<Media mediaDesc="지도 이미지" url="KR.T10105-2021900371_TPW_1_MAP_0000000000.png" alternateUrl="http://122.199.200.224:9110/noti/2021/KR.T10105-2021900371_TPW_1/IMG/KR.T10105-2021900371_TPW_1_MAP_0000000000.png" contentType="image/png" contentLength="533461"/>
+		<Media mediaDesc="심볼 이미지" url="symbol_TPW.png" alternateUrl="http://122.199.200.224:9110/noti/SYMBOL/symbol_TPW.png" contentType="image/png" contentLength="15817"/>
+	</AEA>
+</AEAT>

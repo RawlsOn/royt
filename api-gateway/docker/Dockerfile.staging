@@ -1,0 +1,98 @@
+###########
+# BUILDER #
+###########
+
+# https://stackoverflow.com/questions/59554493/unable-to-fire-a-docker-build-for-django-and-mysql
+
+# pull official base image
+FROM python:3.7-slim as builder
+MAINTAINER Intersources Inc.
+
+RUN adduser app
+
+# set work directory
+WORKDIR /usr/src/backend
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+COPY ./requirements.txt .
+RUN pip install --upgrade pip
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/backend/wheels -r requirements.txt
+
+#########
+# FINAL #
+#########
+
+# pull official base image
+FROM python:3.7-slim
+MAINTAINER Intersources Inc.
+
+SHELL ["/bin/bash", "-cu"]
+RUN echo 'alias ll="ls -lah"' >> ~/.bashrc
+
+# create directory for the app user
+# RUN mkdir -p /home/app
+
+# create the app user
+RUN adduser app
+
+# set timezone
+ENV TZ Asia/Seoul
+
+# create the appropriate directories
+ENV HOME=/home/app
+ENV APP_HOME=/home/app/web
+ENV LOG_FOLDER=/usr/log
+
+RUN mkdir $APP_HOME
+RUN mkdir $APP_HOME/staticfiles
+RUN mkdir $LOG_FOLDER
+
+WORKDIR $APP_HOME
+
+RUN pip install --upgrade pip
+
+# install dependencies
+
+RUN apt-get update
+RUN apt-get install curl -y
+RUN apt-get install vim -y
+
+COPY --from=builder /usr/src/backend/wheels /wheels
+COPY --from=builder /usr/src/backend/requirements.txt .
+RUN pip install --no-cache /wheels/*
+
+RUN apt-get install python3-dev default-libmysqlclient-dev gcc  -y
+
+# sqlite3
+RUN apt-get install libproj-dev -y
+RUN apt-get update && \
+	DEBIAN_FRONTEND=noninteractive apt-get -yq --no-install-recommends install sqlite3=3.*
+
+# spatialite
+RUN apt-get install -y spatialite-bin libsqlite3-mod-spatialite binutils gdal-bin && \
+	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+	mkdir -p /root/db
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# copy entrypoint.sh
+COPY ./docker/entrypoint.staging.sh $APP_HOME
+
+# copy project
+COPY . $APP_HOME
+
+# chown all the files to the app user
+RUN chown -R app:app $APP_HOME
+RUN chown -R app:app $LOG_FOLDER
+
+# change to the app user
+USER app
+
+# CMD ["tail", "-f", "/dev/null"]
+# run entrypoint.dev.sh
+ENTRYPOINT ["/home/app/web/entrypoint.staging.sh"]

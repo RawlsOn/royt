@@ -1,0 +1,36 @@
+FROM python:3.7-slim
+MAINTAINER Intersources Inc.
+
+SHELL ["/bin/bash", "-cu"]
+RUN echo 'alias ll="ls -la"' >> ~/.bashrc
+
+# set timezone
+ENV TZ Asia/Seoul
+
+# set work directory
+WORKDIR /usr/src/api-gateway
+
+# # make log dir
+# RUN mkdir -p /usr/log
+
+# for debuging
+RUN apt-get update
+RUN apt-get install curl -y
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# install dependencies
+RUN pip install --upgrade pip
+COPY ./requirements.txt .
+RUN pip install -r requirements.txt
+
+# copy project
+# COPY . .
+
+# copy entrypoint.sh
+# COPY ./docker/entrypoint.local.sh .
+
+# run entrypoint.sh
+# ENTRYPOINT ["/usr/src/api-gateway/docker/entrypoint.local.sh"]

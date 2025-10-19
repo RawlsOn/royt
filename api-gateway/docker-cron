@@ -1,0 +1,2 @@
+*/30 * * * * /usr/local/bin/python /usr/src/api-gateway/manage.py run_job_monitor --run_type=proto
+* * * * * /usr/local/bin/python /usr/src/api-gateway/manage.py run_job_monitor --run_type=default
