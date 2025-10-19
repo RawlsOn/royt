@@ -61,7 +61,7 @@ urlpatterns = [
     path('api/', include('base.urls')),
     path('api/', include('config.urls')),
     # path('api/', include('user.urls')),
-    # path('api/', include('main.urls')),
+    path('api/', include('main.urls')),
 
     # path('api/', include('dorogglinecore.urls')),
     # path('api/', include('doroggareacore.urls')),

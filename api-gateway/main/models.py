@@ -13,3 +13,7 @@ import user.models as user_models
 
 # ./manage.py makemigrations main
 # ./manage.py migrate main
+
+class UserProfile(base_models.RoBase):
+    nickname = models.CharField(max_length= 16, blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)

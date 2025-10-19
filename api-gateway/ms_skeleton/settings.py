@@ -143,6 +143,7 @@ INSTALLED_APPS = [
 
     # user는 DB를 분리할 수 없음. 빼면 오류남.
     'user',
+    'main',
 ]
 
 MIDDLEWARE = [
