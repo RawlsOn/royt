@@ -188,13 +188,21 @@ class Command(BaseCommand):
                         saved_channels += 1
 
                 # 2. 영상 정보 저장/업데이트
-                # 참여율 계산
+                # 통계 계산
                 view_count = video_data['view_count']
                 like_count = video_data['like_count']
                 comment_count = video_data['comment_count']
+
+                # 참여율 계산
                 engagement_rate = 0.0
                 if view_count > 0:
                     engagement_rate = (like_count + comment_count) / view_count * 100
+
+                # 구독자 대비 조회수 계산 (배수)
+                views_per_subscriber = 0.0
+                channel_info = video_data.get('channel_info')
+                if channel_info and channel_info.get('subscriber_count', 0) > 0:
+                    views_per_subscriber = view_count / channel_info['subscriber_count']
 
                 # 기존 영상이 있는지 확인 (업데이트 전 통계 저장용)
                 try:
@@ -209,6 +217,8 @@ class Command(BaseCommand):
                             like_count=existing_video.like_count,
                             comment_count=existing_video.comment_count,
                             engagement_rate=existing_video.engagement_rate,
+                            views_per_subscriber=existing_video.views_per_subscriber,
+                            original_saved_at=existing_video.updated_at,  # 원본 데이터의 마지막 업데이트 시각
                         )
                         saved_stats += 1
                     video_exists = True
@@ -229,6 +239,7 @@ class Command(BaseCommand):
                         'like_count': like_count,
                         'comment_count': comment_count,
                         'engagement_rate': engagement_rate,
+                        'views_per_subscriber': views_per_subscriber,
                         'duration': video_data.get('duration', ''),
                         'category_id': video_data.get('category_id', ''),
                         'tags': video_data.get('tags', []),
@@ -249,6 +260,8 @@ class Command(BaseCommand):
                         like_count=like_count,
                         comment_count=comment_count,
                         engagement_rate=engagement_rate,
+                        views_per_subscriber=views_per_subscriber,
+                        original_saved_at=video.created_at,  # 원본 데이터 생성 시각
                     )
                     saved_stats += 1
 

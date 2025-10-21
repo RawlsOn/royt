@@ -148,6 +148,11 @@ class YouTubeVideo(RoBase):
         db_index=True,
         verbose_name="참여율 (%)"
     )
+    views_per_subscriber = models.FloatField(
+        default=0.0,
+        db_index=True,
+        verbose_name="구독자 대비 조회수 (배수)"
+    )
 
     # 메타 정보
     duration = models.CharField(
@@ -224,11 +229,22 @@ class YouTubeVideoStatHistory(RoBase):
         default=0.0,
         verbose_name="참여율 (%)"
     )
+    views_per_subscriber = models.FloatField(
+        default=0.0,
+        verbose_name="구독자 대비 조회수 (배수)"
+    )
 
+    # 시각 정보
+    original_saved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="원본 데이터 저장 시각"
+    )
     snapshot_at = models.DateTimeField(
         auto_now_add=True,
         db_index=True,
-        verbose_name="스냅샷 시각"
+        verbose_name="히스토리 저장 시각"
     )
 
     class Meta:
