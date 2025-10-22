@@ -814,7 +814,8 @@ class YouTubeAPIWrapper:
             }
         """
         if languages is None:
-            languages = ['ko', 'en']
+            languages = ['ko']
+            # languages = ['ko', 'en']
 
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
@@ -836,18 +837,33 @@ class YouTubeAPIWrapper:
             # 우선순위 언어로 시도
             transcript = None
             used_language = None
+            is_generated = False
 
             for lang in languages:
                 try:
-                    transcript = transcript_list.find_transcript([lang])
+                    # 먼저 수동 자막 시도
+                    transcript = transcript_list.find_manually_created_transcript([lang])
                     used_language = lang
+                    is_generated = False
                     if self.verbose:
-                        print(f"  ✅ {lang} 자막 발견")
+                        print(f"  ✅ {lang} 수동 자막 발견")
                     break
                 except NoTranscriptFound:
                     if self.verbose:
-                        print(f"  ⚠️  {lang} 자막 없음, 다음 언어 시도...")
-                    continue
+                        print(f"  ⚠️  {lang} 수동 자막 없음, 자동 생성 자막 시도...")
+
+                    # 수동 자막이 없으면 자동 생성 자막 시도
+                    try:
+                        transcript = transcript_list.find_generated_transcript([lang])
+                        used_language = lang
+                        is_generated = True
+                        if self.verbose:
+                            print(f"  ✅ {lang} 자동 생성 자막 발견")
+                        break
+                    except NoTranscriptFound:
+                        if self.verbose:
+                            print(f"  ⚠️  {lang} 자동 생성 자막도 없음, 다음 언어 시도...")
+                        continue
 
             # 우선순위 언어가 없으면 사용 가능한 첫 번째 자막 사용
             if not transcript:
@@ -877,6 +893,7 @@ class YouTubeAPIWrapper:
                 print(f"📊 자막 정보")
                 print(f"{'='*80}")
                 print(f"언어: {used_language}")
+                print(f"유형: {'자동 생성' if is_generated else '수동 작성'}")
                 print(f"세그먼트 수: {len(segments)}개")
                 print(f"전체 길이: {len(full_text)}자")
                 print(f"첫 100자: {full_text[:100]}...")
@@ -886,6 +903,7 @@ class YouTubeAPIWrapper:
                 'video_id': video_id,
                 'transcript': full_text,
                 'language': used_language,
+                'is_generated': is_generated,
             }
 
             # verbose 모드에서는 세그먼트 정보도 포함
@@ -898,7 +916,8 @@ class YouTubeAPIWrapper:
 
             # 간단한 요약 출력
             if not self.verbose:
-                print(f"✅ 자막 조회 완료: {video_id} (언어: {used_language}, {len(full_text)}자)")
+                subtitle_type = "자동생성" if is_generated else "수동"
+                print(f"✅ 자막 조회 완료: {video_id} ({subtitle_type}, 언어: {used_language}, {len(full_text)}자)")
 
             return transcript_info
 

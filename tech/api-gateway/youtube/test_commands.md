@@ -104,10 +104,10 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_delete_old_chan
 ## 비디오 상세 정보 조회
 ```bash
 # 비디오 ID로 조회
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_info 8aVg0QpsA8E
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_info 6JYx7wGO5qQ
 
 # 상세 로그와 함께 조회
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_info 8aVg0QpsA8E --verbose
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_info 6JYx7wGO5qQ --verbose
 ```
 
 **조회되는 정보:**
@@ -122,26 +122,28 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_info 
 ## 비디오 자막 조회
 ```bash
 # 비디오 자막 조회 (기본: 한국어 우선, 없으면 영어)
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 6JYx7wGO5qQ
 
 # 특정 언어 우선순위 지정
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E --languages en,ko
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 6JYx7wGO5qQ --languages en,ko
 
 # 영어만 조회
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E --languages en
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 6JYx7wGO5qQ --languages en
 
 # DB에 저장하지 않고 조회
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E --no-db
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 6JYx7wGO5qQ --no-db
 
 # 상세 로그와 함께 조회 (세그먼트 정보 포함)
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E --verbose
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 6JYx7wGO5qQ --verbose
 ```
 
 **기능:**
 - `youtube-transcript-api` 라이브러리 사용 (YouTube Data API 할당량 소비 없음)
-- 자동 생성 자막 및 수동 자막 모두 지원
-- 우선순위 언어로 자막을 찾고, 없으면 사용 가능한 첫 번째 자막 사용
+- **수동 자막 우선, 없으면 자동 생성 자막 사용**
+- 각 언어별로 수동 자막 → 자동 자막 순서로 시도
+- 우선순위 언어에 자막이 없으면 사용 가능한 첫 번째 자막 사용
 - 전체 자막을 하나의 텍스트로 결합하여 DB에 저장
+- 자막 유형(수동/자동) 정보도 함께 출력
 
 **옵션:**
 - `--languages ko,en`: 쉼표로 구분된 언어 코드 우선순위 (기본값: ko,en)

@@ -60,6 +60,8 @@ class Command(BaseCommand):
             print("="*80)
             print(f"비디오 ID: {transcript_info['video_id']}")
             print(f"언어: {transcript_info['language']}")
+            subtitle_type = "자동 생성" if transcript_info.get('is_generated', False) else "수동 작성"
+            print(f"유형: {subtitle_type}")
             print(f"전체 길이: {len(transcript_info['transcript'])}자")
             print(f"\n첫 500자:")
             print("-" * 80)
