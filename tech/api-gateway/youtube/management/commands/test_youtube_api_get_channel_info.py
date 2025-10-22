@@ -15,19 +15,25 @@ class Command(BaseCommand):
         parser.add_argument(
             'channel_identifier',
             type=str,
-            help=''
+            help='YouTube 채널 ID 또는 핸들 (예: @channelname 또는 UCxxxxx)'
         )
         parser.add_argument(
             '--no-db',
             action='store_true',
-            help=''
+            help='DB에 저장하지 않음'
+        )
+        parser.add_argument(
+            '--verbose',
+            action='store_true',
+            help='상세한 로그 출력'
         )
 
     def handle(self, *args, **options):
         channel_identifier = options['channel_identifier']
         save_to_db = not options['no_db']
+        verbose = options['verbose']
 
-        youtube_api = YouTubeAPIWrapper(save_to_db=save_to_db)
+        youtube_api = YouTubeAPIWrapper(save_to_db=save_to_db, verbose=verbose)
 
         channel_info = youtube_api.get_channel_info(channel_identifier)
 
