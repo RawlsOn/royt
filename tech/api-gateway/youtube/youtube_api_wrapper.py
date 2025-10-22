@@ -936,12 +936,28 @@ class YouTubeAPIWrapper:
             return None
 
         except Exception as e:
+            error_msg = str(e)
+
+            # 일반적인 오류 패턴 파악
+            if "no element found" in error_msg.lower():
+                if not self.verbose:
+                    print(f"❌ 자막 조회 실패: {video_id}")
+                    print(f"   원인: YouTube에서 빈 응답을 받았습니다. 가능한 원인:")
+                    print(f"   - 비디오에 자막이 없음")
+                    print(f"   - 비디오가 비공개/삭제됨")
+                    print(f"   - 지역 제한이 걸려 있음")
+                else:
+                    print(f"❌ XML 파싱 오류: YouTube에서 유효하지 않은 응답을 받았습니다")
+            else:
+                if not self.verbose:
+                    print(f"❌ 자막 조회 실패: {video_id} - {e}")
+                else:
+                    print(f"❌ 자막 조회 실패: {e}")
+
             if self.verbose:
-                print(f"❌ 자막 조회 실패: {e}")
                 import traceback
                 traceback.print_exc()
-            else:
-                print(f"❌ 자막 조회 실패: {video_id} - {e}")
+
             return None
 
     def _get_video_details(self, video_ids: List[str]) -> Dict[str, Dict]:
