@@ -946,11 +946,23 @@ class YouTubeAPIWrapper:
                 return None
 
             if self.verbose:
-                print(f"\n  📋 선택된 자막: {transcript}")
+                print(f"\n  📋 선택된 자막:")
+                print(f"     객체: {transcript}")
                 print(f"     언어 코드: {used_language}")
                 print(f"     자동 생성: {is_generated}")
+                print(f"     language: {transcript.language}")
+                print(f"     language_code: {transcript.language_code}")
 
-            # 자막 데이터 가져오기 (에러 처리 추가)
+                # 자막 객체의 내부 속성 확인
+                try:
+                    if hasattr(transcript, 'video_id'):
+                        print(f"     video_id: {transcript.video_id}")
+                    if hasattr(transcript, '_http_client'):
+                        print(f"     _http_client: {transcript._http_client}")
+                except:
+                    pass
+
+            # 자막 데이터 가져오기
             try:
                 if self.verbose:
                     print(f"\n  🔍 자막 데이터 fetch 시도 중...")
@@ -961,67 +973,35 @@ class YouTubeAPIWrapper:
                     print(f"  ✅ 자막 데이터 fetch 성공 ({len(segments)}개 세그먼트)")
 
             except Exception as fetch_error:
+                print(f"❌ 자막 fetch 실패: {video_id}")
+                print(f"   선택된 자막: {used_language} ({'자동생성' if is_generated else '수동'})")
+                print(f"   오류 타입: {type(fetch_error).__name__}")
+                print(f"   오류 메시지: {fetch_error}")
+
                 if self.verbose:
-                    print(f"  ❌ 자막 데이터 fetch 실패: {fetch_error}")
-                    print(f"  오류 타입: {type(fetch_error).__name__}")
+                    # 자막 URL 확인
+                    try:
+                        if hasattr(transcript, 'base_url'):
+                            print(f"\n  🔗 자막 URL: {transcript.base_url}")
+                    except:
+                        pass
+
+                    # 전체 스택 트레이스
                     import traceback
+                    print(f"\n  📋 전체 스택 트레이스:")
                     traceback.print_exc()
 
-                # 다른 자막으로 fallback 시도 (우선순위 언어만)
-                print(f"\n  🔄 우선순위 언어 내 다른 자막으로 재시도 중...")
-
-                # 우선순위 언어의 다른 유형 자막만 시도
-                transcript_list_retry = YouTubeTranscriptApi.list_transcripts(video_id)
-                all_transcripts = list(transcript_list_retry)
-
-                segments = None
-                fallback_transcript = None
-                fallback_language = None
-                fallback_is_generated = None
-
-                for retry_transcript in all_transcripts:
-                    # 우선순위 언어가 아니면 건너뛰기
-                    if retry_transcript.language_code not in languages:
-                        if self.verbose:
-                            print(f"  ⏭️  건너뛰기: {retry_transcript.language_code} (우선순위 언어 아님)")
-                        continue
-
-                    # 이미 시도한 자막은 건너뛰기
-                    if retry_transcript.language_code == used_language and retry_transcript.is_generated == is_generated:
-                        continue
-
+                    # HTTP 요청 직접 시도해보기
                     try:
-                        if self.verbose:
-                            t_type = "자동생성" if retry_transcript.is_generated else "수동"
-                            print(f"  🔍 시도: {retry_transcript.language_code} ({t_type})")
+                        print(f"\n  🔍 자막 URL 직접 접근 시도...")
+                        # transcript 객체에서 URL 추출 시도
+                        import inspect
+                        print(f"  transcript 타입: {type(transcript)}")
+                        print(f"  transcript 속성: {dir(transcript)}")
+                    except Exception as debug_error:
+                        print(f"  디버깅 정보 수집 실패: {debug_error}")
 
-                        test_segments = retry_transcript.fetch()
-                        segments = test_segments
-                        fallback_transcript = retry_transcript
-                        fallback_language = retry_transcript.language_code
-                        fallback_is_generated = retry_transcript.is_generated
-
-                        if self.verbose:
-                            print(f"  ✅ 성공! {fallback_language} 자막 사용")
-                        break
-
-                    except Exception as retry_error:
-                        if self.verbose:
-                            print(f"  ❌ 실패: {retry_error}")
-                        continue
-
-                # 우선순위 언어의 모든 자막 시도했는데도 실패
-                if segments is None:
-                    if not self.verbose:
-                        print(f"❌ 우선순위 언어({', '.join(languages)}) 자막 fetch 실패: {video_id}")
-                        print(f"   원본 오류: {fetch_error}")
-                    else:
-                        print(f"\n  ❌ 우선순위 언어({', '.join(languages)})의 모든 자막을 시도했지만 fetch 실패")
-                    return None
-
-                # fallback 성공 시 언어 정보 업데이트
-                used_language = fallback_language
-                is_generated = fallback_is_generated
+                return None
 
             # 전체 텍스트 생성
             full_text = ' '.join([segment['text'] for segment in segments])
