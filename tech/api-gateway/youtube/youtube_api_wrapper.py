@@ -9,6 +9,7 @@ from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from django.conf import settings
 from django.utils import timezone
+from youtube.models import YouTubeChannel, YouTubeVideo
 
 
 class YouTubeAPIWrapper:
@@ -818,6 +819,28 @@ class YouTubeAPIWrapper:
         if languages is None:
             languages = ['ko']
 
+        # DB에 이미 자막이 있는지 확인
+        try:
+            existing_video = YouTubeVideo.objects.get(video_id=video_id)
+            if existing_video.transcript:
+                if self.verbose:
+                    print(f"\n{'='*80}")
+                    print(f"📝 자막 조회: {video_id}")
+                    print(f"{'='*80}\n")
+                    print(f"  ✅ DB에 이미 자막이 저장되어 있습니다")
+                    print(f"     언어: {existing_video.transcript_language}")
+                    print(f"     길이: {len(existing_video.transcript)}자")
+                else:
+                    print(f"✅ DB에서 자막 조회: {video_id} (언어: {existing_video.transcript_language}, {len(existing_video.transcript)}자)")
+
+                return {
+                    'video_id': video_id,
+                    'transcript': existing_video.transcript,
+                    'language': existing_video.transcript_language,
+                }
+        except YouTubeVideo.DoesNotExist:
+            pass  # DB에 없으면 YouTube에서 가져옴
+
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
 
@@ -829,7 +852,7 @@ class YouTubeAPIWrapper:
 
             # 공식 PyPI 문서의 권장 방법: fetch() 메서드 사용
             if self.verbose:
-                print(f"  🔍 자막 데이터 조회 중...")
+                print(f"  🔍 YouTube에서 자막 데이터 조회 중...")
 
             ytt_api = YouTubeTranscriptApi()
             transcript_data = ytt_api.fetch(video_id, languages=languages)
