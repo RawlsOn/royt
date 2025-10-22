@@ -20,7 +20,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--languages',
             type=str,
-            default='ko,en',
+            default='ko',
             help='우선순위 언어 (쉼표로 구분, 기본값: ko,en)'
         )
         parser.add_argument(

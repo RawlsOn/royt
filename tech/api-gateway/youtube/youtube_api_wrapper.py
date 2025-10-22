@@ -800,6 +800,8 @@ class YouTubeAPIWrapper:
         """
         비디오 자막 조회 (youtube-transcript-api 사용)
 
+        공식 문서: https://pypi.org/project/youtube-transcript-api/
+
         Args:
             video_id: 유튜브 비디오 ID
             languages: 우선순위 언어 리스트 (기본값: ['ko'])
@@ -818,11 +820,6 @@ class YouTubeAPIWrapper:
 
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
-            from youtube_transcript_api._errors import (
-                TranscriptsDisabled,
-                NoTranscriptFound,
-                VideoUnavailable
-            )
 
             if self.verbose:
                 print(f"\n{'='*80}")
@@ -830,15 +827,12 @@ class YouTubeAPIWrapper:
                 print(f"   우선 언어: {', '.join(languages)}")
                 print(f"{'='*80}\n")
 
-            # YouTubeTranscriptApi.get_transcript() 직접 사용
-            # 이 메서드는 수동/자동 자막을 자동으로 처리하고 우선순위 언어를 찾아줌
+            # 공식 PyPI 문서의 권장 방법: fetch() 메서드 사용
             if self.verbose:
                 print(f"  🔍 자막 데이터 조회 중...")
 
-            transcript_data = YouTubeTranscriptApi.get_transcript(
-                video_id,
-                languages=languages
-            )
+            ytt_api = YouTubeTranscriptApi()
+            transcript_data = ytt_api.fetch(video_id, languages=languages)
 
             if self.verbose:
                 print(f"  ✅ 자막 데이터 조회 성공 ({len(transcript_data)}개 세그먼트)")
@@ -846,7 +840,7 @@ class YouTubeAPIWrapper:
             # 전체 텍스트 생성
             full_text = ' '.join([segment['text'] for segment in transcript_data])
 
-            # 사용된 언어 (첫 번째 우선순위 언어로 가정)
+            # 사용된 언어
             used_language = languages[0] if languages else 'unknown'
 
             if self.verbose:
@@ -879,25 +873,25 @@ class YouTubeAPIWrapper:
 
             return transcript_info
 
-        except TranscriptsDisabled:
-            print(f"❌ 자막이 비활성화되어 있습니다: {video_id}")
-            return None
-
-        except VideoUnavailable:
-            print(f"❌ 비디오를 사용할 수 없습니다: {video_id}")
-            return None
-
-        except NoTranscriptFound:
-            print(f"❌ 자막을 찾을 수 없습니다: {video_id} (언어: {', '.join(languages)})")
-            if self.verbose:
-                print(f"   요청한 언어의 자막이 없습니다.")
-            return None
-
         except Exception as e:
-            print(f"❌ 자막 조회 실패: {video_id} - {e}")
+            error_type = type(e).__name__
+
+            # 에러 타입별 처리
+            if 'TranscriptsDisabled' in error_type:
+                print(f"❌ 자막이 비활성화되어 있습니다: {video_id}")
+            elif 'VideoUnavailable' in error_type:
+                print(f"❌ 비디오를 사용할 수 없습니다: {video_id}")
+            elif 'NoTranscriptFound' in error_type:
+                print(f"❌ 자막을 찾을 수 없습니다: {video_id} (언어: {', '.join(languages)})")
+                if self.verbose:
+                    print(f"   요청한 언어의 자막이 없습니다.")
+            else:
+                print(f"❌ 자막 조회 실패: {video_id} - {e}")
+
             if self.verbose:
                 import traceback
                 traceback.print_exc()
+
             return None
 
     def _get_video_details(self, video_ids: List[str]) -> Dict[str, Dict]:
