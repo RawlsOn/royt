@@ -4,6 +4,8 @@ YouTube Data API v3 Wrapper
 """
 import re
 import json
+import time
+import random
 import requests
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
@@ -819,25 +821,43 @@ class YouTubeAPIWrapper:
         if languages is None:
             languages = ['ko']
 
-        # DB에 이미 자막이 있는지 확인
+        # DB에 이미 시도한 기록이 있는지 확인
         try:
             existing_video = YouTubeVideo.objects.get(video_id=video_id)
-            if existing_video.transcript:
-                if self.verbose:
-                    print(f"\n{'='*80}")
-                    print(f"📝 자막 조회: {video_id}")
-                    print(f"{'='*80}\n")
-                    print(f"  ✅ DB에 이미 자막이 저장되어 있습니다")
-                    print(f"     언어: {existing_video.transcript_language}")
-                    print(f"     길이: {len(existing_video.transcript)}자")
-                else:
-                    print(f"✅ DB에서 자막 조회: {video_id} (언어: {existing_video.transcript_language}, {len(existing_video.transcript)}자)")
 
-                return {
-                    'video_id': video_id,
-                    'transcript': existing_video.transcript,
-                    'language': existing_video.transcript_language,
-                }
+            # 이미 조회를 시도한 적이 있으면
+            if existing_video.transcript_status:
+                # 성공한 경우 - 자막 반환
+                if existing_video.transcript_status == 'success' and existing_video.transcript:
+                    if self.verbose:
+                        print(f"\n{'='*80}")
+                        print(f"📝 자막 조회: {video_id}")
+                        print(f"{'='*80}\n")
+                        print(f"  ✅ DB에 이미 자막이 저장되어 있습니다")
+                        print(f"     언어: {existing_video.transcript_language}")
+                        print(f"     길이: {len(existing_video.transcript)}자")
+                    else:
+                        print(f"✅ DB에서 자막 조회: {video_id} (언어: {existing_video.transcript_language}, {len(existing_video.transcript)}자)")
+
+                    return {
+                        'video_id': video_id,
+                        'transcript': existing_video.transcript,
+                        'language': existing_video.transcript_language,
+                        'status': 'success'
+                    }
+
+                # 실패한 경우 - 다시 시도하지 않음
+                else:
+                    if not self.verbose:
+                        print(f"⏭️  이전 시도 기록: {existing_video.transcript_status} (건너뛰기)")
+
+                    return {
+                        'video_id': video_id,
+                        'error': f'Previously failed with status: {existing_video.transcript_status}',
+                        'error_type': 'PreviouslyFailed',
+                        'status': existing_video.transcript_status
+                    }
+
         except YouTubeVideo.DoesNotExist:
             pass  # DB에 없으면 YouTube에서 가져옴
 
@@ -906,24 +926,191 @@ class YouTubeAPIWrapper:
 
         except Exception as e:
             error_type = type(e).__name__
+            error_msg = str(e)
 
-            # 에러 타입별 처리
+            # 에러 타입별 처리 및 상태 저장
+            status = 'error'
             if 'TranscriptsDisabled' in error_type:
                 print(f"❌ 자막이 비활성화되어 있습니다: {video_id}")
+                status = 'disabled'
             elif 'VideoUnavailable' in error_type:
                 print(f"❌ 비디오를 사용할 수 없습니다: {video_id}")
+                status = 'unavailable'
             elif 'NoTranscriptFound' in error_type:
                 print(f"❌ 자막을 찾을 수 없습니다: {video_id} (언어: {', '.join(languages)})")
                 if self.verbose:
                     print(f"   요청한 언어의 자막이 없습니다.")
+                status = 'no_transcript'
             else:
                 print(f"❌ 자막 조회 실패: {video_id} - {e}")
+                status = 'error'
+
+            # DB에 상태 저장
+            if self.save_to_db:
+                self._save_transcript_status_to_db(video_id, status)
 
             if self.verbose:
                 import traceback
                 traceback.print_exc()
 
-            return None
+            # 에러 정보 반환 (IP 블락 감지용)
+            return {
+                'video_id': video_id,
+                'error': error_msg,
+                'error_type': error_type,
+                'status': status
+            }
+
+    def save_all_channel_video_transcripts(
+        self,
+        channel_identifier: str,
+        languages: Optional[List[str]] = None
+    ) -> Dict:
+        """
+        채널의 모든 영상 자막을 저장
+
+        Args:
+            channel_identifier: 채널 ID 또는 핸들 (예: @채널명)
+            languages: 우선순위 언어 리스트 (기본값: ['ko'])
+
+        Returns:
+            결과 딕셔너리 {
+                'total': 전체 영상 수,
+                'success': 성공 수,
+                'failed': 실패 수,
+                'skipped': 건너뛴 수 (이미 DB에 있음)
+            }
+        """
+        if languages is None:
+            languages = ['ko']
+
+        print(f"\n{'='*80}")
+        print(f"📝 채널 영상 자막 일괄 저장")
+        print(f"{'='*80}")
+        print(f"채널: {channel_identifier}")
+        print(f"언어: {', '.join(languages)}")
+        print(f"{'='*80}\n")
+
+        # DB에서 채널의 모든 영상 가져오기
+        try:
+            if channel_identifier.startswith('@'):
+                # 핸들로 조회
+                channel = YouTubeChannel.objects.get(channel_custom_url=channel_identifier)
+            else:
+                # 채널 ID로 조회
+                channel = YouTubeChannel.objects.get(channel_id=channel_identifier)
+        except YouTubeChannel.DoesNotExist:
+            print(f"❌ 채널을 찾을 수 없습니다: {channel_identifier}")
+            print(f"   먼저 get_channel_info로 채널 정보를 저장해 주세요.")
+            return {'total': 0, 'success': 0, 'failed': 0, 'skipped': 0}
+
+        # 채널의 모든 영상 가져오기
+        videos = YouTubeVideo.objects.filter(channel=channel).order_by('-published_at')
+        total_count = videos.count()
+
+        if total_count == 0:
+            print(f"❌ 채널에 저장된 영상이 없습니다: {channel.channel_title}")
+            print(f"   먼저 list_channel_videos로 영상 목록을 저장해 주세요.")
+            return {'total': 0, 'success': 0, 'failed': 0, 'skipped': 0}
+
+        print(f"📊 총 {total_count}개 영상 발견")
+        print(f"{'='*80}\n")
+
+        success_count = 0
+        failed_count = 0
+        skipped_count = 0
+
+        for idx, video in enumerate(videos, 1):
+            # 진행 상황 출력
+            print(f"[{idx}/{total_count}] {video.title[:50]}...")
+
+            # 이미 시도한 적이 있으면 건너뛰기
+            if video.transcript_status:
+                if video.transcript_status == 'success':
+                    print(f"  ⏭️  이미 자막 있음 (건너뛰기)")
+                else:
+                    print(f"  ⏭️  이전 시도: {video.transcript_status} (건너뛰기)")
+                skipped_count += 1
+                continue
+
+            # 자막 가져오기
+            result = self.get_video_transcript(
+                video_id=video.video_id,
+                languages=languages
+            )
+
+            # IP 블락 감지 (다양한 패턴 체크)
+            if result and isinstance(result, dict) and 'error' in result:
+                error_msg = result['error'].lower()
+                error_type = result.get('error_type', '')
+
+                # IP 블락 관련 키워드 체크
+                ip_block_keywords = [
+                    'youtube is blocking requests from your ip',
+                    'blocking requests',
+                    'ip has been blocked',
+                    'requestblocked',
+                    'ipblocked'
+                ]
+
+                is_blocked = any(keyword in error_msg for keyword in ip_block_keywords)
+
+                if is_blocked:
+                    print(f"\n{'='*80}")
+                    print(f"🚫 YouTube IP 블락 감지!")
+                    print(f"{'='*80}")
+                    print(f"YouTube에서 IP 차단을 감지했습니다.")
+                    print(f"에러: {result['error'][:200]}...")
+                    print(f"\n작업을 중단합니다.")
+                    print(f"\n현재까지 결과:")
+                    print(f"  처리: {idx}/{total_count}개")
+                    print(f"  성공: {success_count}개")
+                    print(f"  실패: {failed_count}개")
+                    print(f"  건너뛰기: {skipped_count}개")
+                    print(f"{'='*80}\n")
+                    print(f"💡 해결 방법:")
+                    print(f"  - 잠시 후에 다시 시도하세요")
+                    print(f"  - 프록시나 VPN을 사용하세요")
+                    print(f"  - 다른 네트워크에서 시도하세요")
+                    print(f"{'='*80}\n")
+                    return {
+                        'total': total_count,
+                        'success': success_count,
+                        'failed': failed_count,
+                        'skipped': skipped_count,
+                        'stopped': True,
+                        'stopped_at': idx
+                    }
+
+            if result and 'error' not in result:
+                success_count += 1
+            else:
+                failed_count += 1
+
+            # IP 블락 방지를 위한 랜덤 sleep (180~300초)
+            if idx < total_count:  # 마지막 영상이 아니면
+                sleep_time = random.uniform(180, 300)
+                print(f"  ⏱️  대기 중... ({sleep_time:.1f}초)")
+                time.sleep(sleep_time)
+
+            print()  # 빈 줄
+
+        # 최종 결과
+        print(f"{'='*80}")
+        print(f"📊 자막 저장 완료")
+        print(f"{'='*80}")
+        print(f"전체: {total_count}개")
+        print(f"성공: {success_count}개")
+        print(f"실패: {failed_count}개")
+        print(f"건너뛰기: {skipped_count}개 (이미 DB에 있음)")
+        print(f"{'='*80}\n")
+
+        return {
+            'total': total_count,
+            'success': success_count,
+            'failed': failed_count,
+            'skipped': skipped_count
+        }
 
     def _get_video_details(self, video_ids: List[str]) -> Dict[str, Dict]:
         """
@@ -1313,7 +1500,7 @@ class YouTubeAPIWrapper:
             import traceback
             traceback.print_exc()
 
-    def _save_transcript_to_db(self, video_id: str, transcript: str, language: str) -> None:
+    def _save_transcript_to_db(self, video_id: str, transcript: str, language: str, status: str = 'success') -> None:
         """
         자막 정보를 DB에 저장
 
@@ -1321,16 +1508,16 @@ class YouTubeAPIWrapper:
             video_id: 비디오 ID
             transcript: 자막 전체 텍스트
             language: 언어 코드
+            status: 자막 조회 상태 (기본값: 'success')
         """
         try:
-            from youtube.models import YouTubeVideo
-
             # 비디오 찾기
             try:
                 video = YouTubeVideo.objects.get(video_id=video_id)
                 video.transcript = transcript
                 video.transcript_language = language
-                video.save(update_fields=['transcript', 'transcript_language', 'updated_at'])
+                video.transcript_status = status
+                video.save(update_fields=['transcript', 'transcript_language', 'transcript_status', 'updated_at'])
 
                 if self.verbose:
                     print(f"  💾 자막 DB 저장 완료: {video.title[:50]}")
@@ -1344,6 +1531,31 @@ class YouTubeAPIWrapper:
                 print(f"  ⚠️  자막 DB 저장 실패: {e}")
                 import traceback
                 traceback.print_exc()
+
+    def _save_transcript_status_to_db(self, video_id: str, status: str) -> None:
+        """
+        자막 조회 상태만 DB에 저장
+
+        Args:
+            video_id: 비디오 ID
+            status: 자막 조회 상태 (no_transcript, disabled, unavailable, error)
+        """
+        try:
+            try:
+                video = YouTubeVideo.objects.get(video_id=video_id)
+                video.transcript_status = status
+                video.save(update_fields=['transcript_status', 'updated_at'])
+
+                if self.verbose:
+                    print(f"  💾 자막 상태 저장: {status}")
+
+            except YouTubeVideo.DoesNotExist:
+                if self.verbose:
+                    print(f"  ⚠️  비디오를 찾을 수 없습니다 (DB에 없음): {video_id}")
+
+        except Exception as e:
+            if self.verbose:
+                print(f"  ⚠️  자막 상태 저장 실패: {e}")
 
     def _print_api_call_summary(self) -> None:
         """

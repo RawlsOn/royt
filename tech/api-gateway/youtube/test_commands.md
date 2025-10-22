@@ -159,3 +159,48 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_trans
 - 자막이 비활성화된 영상은 조회 불가
 - 비공개 또는 삭제된 영상은 조회 불가
 - DB에 저장하려면 해당 비디오가 먼저 DB에 있어야 함 (`get_video_info`로 먼저 저장)
+
+## 채널 영상 자막 일괄 저장
+```bash
+# 채널 핸들로 모든 영상 자막 저장
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_save_all_channel_video_transcripts @떠들썩
+
+# 채널 ID로 모든 영상 자막 저장
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_save_all_channel_video_transcripts UC_x5XG1OV2P6uZZ5FSM9Ttw
+
+# 특정 언어로 저장
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_save_all_channel_video_transcripts @떠들썩 --languages ko
+
+# 상세 로그와 함께 저장
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_save_all_channel_video_transcripts @떠들썩 --verbose
+```
+
+**기능:**
+- 채널의 DB에 저장된 모든 영상의 자막을 일괄 저장
+- 이미 시도한 영상은 자동으로 건너뛰기 (성공/실패 모두)
+- 자막 조회 결과를 DB에 저장 (성공, 자막 없음, 비활성화 등)
+- 진행 상황을 실시간으로 출력 (예: [1/23])
+- 각 요청 후 5~10초 랜덤 대기 (IP 블락 방지)
+- YouTube IP 블락 감지 시 자동 중단
+- 최종 통계 출력 (성공/실패/건너뛰기)
+
+**옵션:**
+- `--languages ko,en`: 쉼표로 구분된 언어 코드 우선순위 (기본값: ko)
+- `--verbose`: 각 영상별 상세한 로그 출력
+
+**자막 조회 상태:**
+- `success`: 자막을 성공적으로 가져옴
+- `no_transcript`: 요청한 언어의 자막이 없음
+- `disabled`: 자막이 비활성화됨
+- `unavailable`: 비디오를 사용할 수 없음
+- `error`: 기타 오류
+
+**⚠️ 주의사항:**
+- 먼저 `get_channel_info`로 채널 정보를 저장해야 함
+- 먼저 `list_channel_videos`로 영상 목록을 저장해야 함
+- 한 번 시도한 영상은 다시 시도하지 않음 (실패해도)
+- YouTube API 할당량을 소비하지 않음 (youtube-transcript-api 사용)
+
+
+## yt-dlp
+docker exec royt-royt-api-gateway-1 yt-dlp --write-auto-sub --write-subs --sub-lang ko --sub-format vtt --skip-download "https://www.youtube.com/watch?v=6JYx7wGO5qQ"
