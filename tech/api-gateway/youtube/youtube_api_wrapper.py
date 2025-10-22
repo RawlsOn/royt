@@ -831,8 +831,71 @@ class YouTubeAPIWrapper:
                 print(f"   우선 언어: {', '.join(languages)}")
                 print(f"{'='*80}\n")
 
-            # 자막 가져오기
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            # 자막 가져오기 (더 자세한 디버깅)
+            try:
+                if self.verbose:
+                    print(f"  🔍 YouTube에 자막 목록 요청 중...")
+
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+                if self.verbose:
+                    print(f"  ✅ 자막 목록 조회 성공")
+
+                    # 사용 가능한 모든 자막 출력
+                    try:
+                        all_transcripts = list(transcript_list)
+                        print(f"\n  {'='*76}")
+                        print(f"  📋 사용 가능한 자막 목록 (총 {len(all_transcripts)}개)")
+                        print(f"  {'='*76}")
+                        for t in all_transcripts:
+                            t_type = "자동생성" if t.is_generated else "수동"
+                            print(f"  - {t.language} ({t.language_code}) - {t_type}")
+                        print(f"  {'='*76}\n")
+
+                        # transcript_list를 다시 가져와야 함 (iterator 소진됨)
+                        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                    except Exception as e:
+                        print(f"  ⚠️  자막 목록 출력 실패: {e}")
+
+            except Exception as e:
+                if self.verbose:
+                    print(f"  ❌ 자막 목록 조회 실패")
+                    print(f"  오류 메시지: {e}")
+                    print(f"  오류 타입: {type(e).__name__}")
+
+                    # YouTube 페이지 직접 확인
+                    print(f"\n  🔍 YouTube 페이지 직접 확인 시도...")
+                    try:
+                        test_url = f"https://www.youtube.com/watch?v={video_id}"
+                        response = requests.get(test_url, timeout=10)
+                        print(f"  YouTube 페이지 HTTP 상태: {response.status_code}")
+
+                        if response.status_code == 200:
+                            # 페이지에 자막 관련 정보가 있는지 확인
+                            if 'captionTracks' in response.text:
+                                print(f"  ✅ 페이지에 captionTracks 정보 존재")
+                            else:
+                                print(f"  ❌ 페이지에 captionTracks 정보 없음")
+
+                            if '"playabilityStatus"' in response.text:
+                                # 재생 가능 여부 간단히 체크
+                                if '"status":"OK"' in response.text:
+                                    print(f"  ✅ 비디오 재생 가능")
+                                elif '"status":"UNPLAYABLE"' in response.text:
+                                    print(f"  ❌ 비디오 재생 불가")
+                                elif '"status":"LOGIN_REQUIRED"' in response.text:
+                                    print(f"  ❌ 로그인 필요 (연령 제한 등)")
+                        else:
+                            print(f"  ❌ YouTube 페이지 접근 실패: {response.status_code}")
+
+                    except Exception as req_err:
+                        print(f"  ⚠️  YouTube 페이지 확인 실패: {req_err}")
+
+                    # 더 자세한 디버깅 정보
+                    import traceback
+                    print(f"\n  스택 트레이스:")
+                    traceback.print_exc()
+                raise
 
             # 우선순위 언어로 시도
             transcript = None
