@@ -945,8 +945,77 @@ class YouTubeAPIWrapper:
                     print(f"❌ 사용 가능한 자막이 없습니다: {video_id}")
                 return None
 
-            # 자막 데이터 가져오기
-            segments = transcript.fetch()
+            if self.verbose:
+                print(f"\n  📋 선택된 자막: {transcript}")
+                print(f"     언어 코드: {used_language}")
+                print(f"     자동 생성: {is_generated}")
+
+            # 자막 데이터 가져오기 (에러 처리 추가)
+            try:
+                if self.verbose:
+                    print(f"\n  🔍 자막 데이터 fetch 시도 중...")
+
+                segments = transcript.fetch()
+
+                if self.verbose:
+                    print(f"  ✅ 자막 데이터 fetch 성공 ({len(segments)}개 세그먼트)")
+
+            except Exception as fetch_error:
+                if self.verbose:
+                    print(f"  ❌ 자막 데이터 fetch 실패: {fetch_error}")
+                    print(f"  오류 타입: {type(fetch_error).__name__}")
+                    import traceback
+                    traceback.print_exc()
+
+                # 다른 자막으로 fallback 시도
+                print(f"\n  🔄 다른 자막으로 재시도 중...")
+
+                # 사용 가능한 모든 자막으로 하나씩 시도
+                transcript_list_retry = YouTubeTranscriptApi.list_transcripts(video_id)
+                all_transcripts = list(transcript_list_retry)
+
+                segments = None
+                fallback_transcript = None
+                fallback_language = None
+                fallback_is_generated = None
+
+                for retry_transcript in all_transcripts:
+                    # 이미 시도한 자막은 건너뛰기
+                    if retry_transcript.language_code == used_language and retry_transcript.is_generated == is_generated:
+                        continue
+
+                    try:
+                        if self.verbose:
+                            t_type = "자동생성" if retry_transcript.is_generated else "수동"
+                            print(f"  🔍 시도: {retry_transcript.language_code} ({t_type})")
+
+                        test_segments = retry_transcript.fetch()
+                        segments = test_segments
+                        fallback_transcript = retry_transcript
+                        fallback_language = retry_transcript.language_code
+                        fallback_is_generated = retry_transcript.is_generated
+
+                        if self.verbose:
+                            print(f"  ✅ 성공! {fallback_language} 자막 사용")
+                        break
+
+                    except Exception as retry_error:
+                        if self.verbose:
+                            print(f"  ❌ 실패: {retry_error}")
+                        continue
+
+                # 모든 자막 시도했는데도 실패
+                if segments is None:
+                    if not self.verbose:
+                        print(f"❌ 모든 자막 fetch 실패: {video_id}")
+                        print(f"   원본 오류: {fetch_error}")
+                    else:
+                        print(f"\n  ❌ 사용 가능한 모든 자막을 시도했지만 fetch 실패")
+                    return None
+
+                # fallback 성공 시 언어 정보 업데이트
+                used_language = fallback_language
+                is_generated = fallback_is_generated
 
             # 전체 텍스트 생성
             full_text = ' '.join([segment['text'] for segment in segments])
@@ -1010,6 +1079,7 @@ class YouTubeAPIWrapper:
                     print(f"   - 비디오가 비공개/삭제됨")
                     print(f"   - 지역 제한이 걸려 있음")
                 else:
+                    print('error_msg:', error_msg)
                     print(f"❌ XML 파싱 오류: YouTube에서 유효하지 않은 응답을 받았습니다")
             else:
                 if not self.verbose:
