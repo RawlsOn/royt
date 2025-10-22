@@ -792,6 +792,139 @@ class YouTubeAPIWrapper:
             self._print_api_call_summary()
             return None
 
+    def get_video_transcript(
+        self,
+        video_id: str,
+        languages: Optional[List[str]] = None
+    ) -> Optional[Dict]:
+        """
+        비디오 자막 조회 (youtube-transcript-api 사용)
+
+        Args:
+            video_id: 유튜브 비디오 ID
+            languages: 우선순위 언어 리스트 (기본값: ['ko', 'en'])
+
+        Returns:
+            자막 정보 딕셔너리 또는 None (실패 시)
+            {
+                'video_id': str,
+                'transcript': str,  # 전체 자막 텍스트
+                'language': str,    # 사용된 언어 코드
+                'segments': List[Dict],  # 타임스탬프 정보 포함 (verbose 모드)
+            }
+        """
+        if languages is None:
+            languages = ['ko', 'en']
+
+        try:
+            from youtube_transcript_api import YouTubeTranscriptApi
+            from youtube_transcript_api._errors import (
+                TranscriptsDisabled,
+                NoTranscriptFound,
+                VideoUnavailable
+            )
+
+            if self.verbose:
+                print(f"\n{'='*80}")
+                print(f"📝 자막 조회 시작: {video_id}")
+                print(f"   우선 언어: {', '.join(languages)}")
+                print(f"{'='*80}\n")
+
+            # 자막 가져오기
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+            # 우선순위 언어로 시도
+            transcript = None
+            used_language = None
+
+            for lang in languages:
+                try:
+                    transcript = transcript_list.find_transcript([lang])
+                    used_language = lang
+                    if self.verbose:
+                        print(f"  ✅ {lang} 자막 발견")
+                    break
+                except NoTranscriptFound:
+                    if self.verbose:
+                        print(f"  ⚠️  {lang} 자막 없음, 다음 언어 시도...")
+                    continue
+
+            # 우선순위 언어가 없으면 사용 가능한 첫 번째 자막 사용
+            if not transcript:
+                try:
+                    available_transcripts = list(transcript_list)
+                    if available_transcripts:
+                        transcript = available_transcripts[0]
+                        used_language = transcript.language_code
+                        if self.verbose:
+                            print(f"  ℹ️  사용 가능한 자막 언어: {used_language}")
+                except Exception:
+                    pass
+
+            if not transcript:
+                if not self.verbose:
+                    print(f"❌ 사용 가능한 자막이 없습니다: {video_id}")
+                return None
+
+            # 자막 데이터 가져오기
+            segments = transcript.fetch()
+
+            # 전체 텍스트 생성
+            full_text = ' '.join([segment['text'] for segment in segments])
+
+            if self.verbose:
+                print(f"\n{'='*80}")
+                print(f"📊 자막 정보")
+                print(f"{'='*80}")
+                print(f"언어: {used_language}")
+                print(f"세그먼트 수: {len(segments)}개")
+                print(f"전체 길이: {len(full_text)}자")
+                print(f"첫 100자: {full_text[:100]}...")
+                print(f"{'='*80}\n")
+
+            transcript_info = {
+                'video_id': video_id,
+                'transcript': full_text,
+                'language': used_language,
+            }
+
+            # verbose 모드에서는 세그먼트 정보도 포함
+            if self.verbose:
+                transcript_info['segments'] = segments[:5]  # 첫 5개만
+
+            # DB에 저장
+            if self.save_to_db:
+                self._save_transcript_to_db(video_id, full_text, used_language)
+
+            # 간단한 요약 출력
+            if not self.verbose:
+                print(f"✅ 자막 조회 완료: {video_id} (언어: {used_language}, {len(full_text)}자)")
+
+            return transcript_info
+
+        except TranscriptsDisabled:
+            if not self.verbose:
+                print(f"❌ 자막이 비활성화되어 있습니다: {video_id}")
+            else:
+                print(f"  ❌ 자막이 비활성화되어 있습니다")
+            return None
+
+        except VideoUnavailable:
+            if not self.verbose:
+                print(f"❌ 비디오를 사용할 수 없습니다: {video_id}")
+            else:
+                print(f"  ❌ 비디오를 사용할 수 없습니다")
+            return None
+
+        except Exception as e:
+            if self.verbose:
+                print(f"❌ 자막 조회 실패: {e}")
+                import traceback
+                traceback.print_exc()
+            else:
+                print(f"❌ 자막 조회 실패: {video_id} - {e}")
+            return None
+
     def _get_video_details(self, video_ids: List[str]) -> Dict[str, Dict]:
         """
         비디오 상세 정보 조회 (duration, view count 등)
@@ -1179,6 +1312,38 @@ class YouTubeAPIWrapper:
                 print(f"  ⚠️  영상 DB 저장 실패: {e}")
             import traceback
             traceback.print_exc()
+
+    def _save_transcript_to_db(self, video_id: str, transcript: str, language: str) -> None:
+        """
+        자막 정보를 DB에 저장
+
+        Args:
+            video_id: 비디오 ID
+            transcript: 자막 전체 텍스트
+            language: 언어 코드
+        """
+        try:
+            from youtube.models import YouTubeVideo
+
+            # 비디오 찾기
+            try:
+                video = YouTubeVideo.objects.get(video_id=video_id)
+                video.transcript = transcript
+                video.transcript_language = language
+                video.save(update_fields=['transcript', 'transcript_language', 'updated_at'])
+
+                if self.verbose:
+                    print(f"  💾 자막 DB 저장 완료: {video.title[:50]}")
+
+            except YouTubeVideo.DoesNotExist:
+                if self.verbose:
+                    print(f"  ⚠️  비디오를 찾을 수 없습니다 (DB에 없음): {video_id}")
+
+        except Exception as e:
+            if self.verbose:
+                print(f"  ⚠️  자막 DB 저장 실패: {e}")
+                import traceback
+                traceback.print_exc()
 
     def _print_api_call_summary(self) -> None:
         """

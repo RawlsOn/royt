@@ -118,3 +118,43 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_info 
 - Shorts 여부 (60초 미만)
 - 조회수, 좋아요 수, 댓글 수
 - 태그, 카테고리 ID
+
+## 비디오 자막 조회
+```bash
+# 비디오 자막 조회 (기본: 한국어 우선, 없으면 영어)
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E
+
+# 특정 언어 우선순위 지정
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E --languages en,ko
+
+# 영어만 조회
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E --languages en
+
+# DB에 저장하지 않고 조회
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E --no-db
+
+# 상세 로그와 함께 조회 (세그먼트 정보 포함)
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 8aVg0QpsA8E --verbose
+```
+
+**기능:**
+- `youtube-transcript-api` 라이브러리 사용 (YouTube Data API 할당량 소비 없음)
+- 자동 생성 자막 및 수동 자막 모두 지원
+- 우선순위 언어로 자막을 찾고, 없으면 사용 가능한 첫 번째 자막 사용
+- 전체 자막을 하나의 텍스트로 결합하여 DB에 저장
+
+**옵션:**
+- `--languages ko,en`: 쉼표로 구분된 언어 코드 우선순위 (기본값: ko,en)
+- `--no-db`: DB에 저장하지 않음
+- `--verbose`: 세그먼트 정보 및 타임스탬프 출력
+
+**조회되는 정보:**
+- 비디오 ID
+- 자막 전체 텍스트
+- 사용된 언어 코드
+- 세그먼트 정보 (verbose 모드)
+
+**⚠️ 참고사항:**
+- 자막이 비활성화된 영상은 조회 불가
+- 비공개 또는 삭제된 영상은 조회 불가
+- DB에 저장하려면 해당 비디오가 먼저 DB에 있어야 함 (`get_video_info`로 먼저 저장)

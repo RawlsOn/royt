@@ -177,6 +177,17 @@ class YouTubeVideo(RoBase):
         verbose_name="태그"
     )
 
+    # 자막 정보
+    transcript = models.TextField(
+        blank=True,
+        verbose_name="자막 (전체 텍스트)"
+    )
+    transcript_language = models.CharField(
+        max_length=10,
+        blank=True,
+        verbose_name="자막 언어 코드"
+    )
+
     class Meta:
         ordering = ['-view_count', '-published_at']
         verbose_name = "YouTube 영상"
