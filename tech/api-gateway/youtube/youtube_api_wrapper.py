@@ -802,7 +802,7 @@ class YouTubeAPIWrapper:
 
         Args:
             video_id: 유튜브 비디오 ID
-            languages: 우선순위 언어 리스트 (기본값: ['ko', 'en'])
+            languages: 우선순위 언어 리스트 (기본값: ['ko'])
 
         Returns:
             자막 정보 딕셔너리 또는 None (실패 시)
@@ -815,7 +815,6 @@ class YouTubeAPIWrapper:
         """
         if languages is None:
             languages = ['ko']
-            # languages = ['ko', 'en']
 
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
@@ -831,188 +830,31 @@ class YouTubeAPIWrapper:
                 print(f"   우선 언어: {', '.join(languages)}")
                 print(f"{'='*80}\n")
 
-            # 자막 가져오기 (더 자세한 디버깅)
-            try:
-                if self.verbose:
-                    print(f"  🔍 YouTube에 자막 목록 요청 중...")
+            # YouTubeTranscriptApi.get_transcript() 직접 사용
+            # 이 메서드는 수동/자동 자막을 자동으로 처리하고 우선순위 언어를 찾아줌
+            if self.verbose:
+                print(f"  🔍 자막 데이터 조회 중...")
 
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-
-                if self.verbose:
-                    print(f"  ✅ 자막 목록 조회 성공")
-
-                    # 사용 가능한 모든 자막 출력
-                    try:
-                        all_transcripts = list(transcript_list)
-                        print(f"\n  {'='*76}")
-                        print(f"  📋 사용 가능한 자막 목록 (총 {len(all_transcripts)}개)")
-                        print(f"  {'='*76}")
-                        for t in all_transcripts:
-                            t_type = "자동생성" if t.is_generated else "수동"
-                            print(f"  - {t.language} ({t.language_code}) - {t_type}")
-                        print(f"  {'='*76}\n")
-
-                        # transcript_list를 다시 가져와야 함 (iterator 소진됨)
-                        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                    except Exception as e:
-                        print(f"  ⚠️  자막 목록 출력 실패: {e}")
-
-            except Exception as e:
-                if self.verbose:
-                    print(f"  ❌ 자막 목록 조회 실패")
-                    print(f"  오류 메시지: {e}")
-                    print(f"  오류 타입: {type(e).__name__}")
-
-                    # YouTube 페이지 직접 확인
-                    print(f"\n  🔍 YouTube 페이지 직접 확인 시도...")
-                    try:
-                        test_url = f"https://www.youtube.com/watch?v={video_id}"
-                        response = requests.get(test_url, timeout=10)
-                        print(f"  YouTube 페이지 HTTP 상태: {response.status_code}")
-
-                        if response.status_code == 200:
-                            # 페이지에 자막 관련 정보가 있는지 확인
-                            if 'captionTracks' in response.text:
-                                print(f"  ✅ 페이지에 captionTracks 정보 존재")
-                            else:
-                                print(f"  ❌ 페이지에 captionTracks 정보 없음")
-
-                            if '"playabilityStatus"' in response.text:
-                                # 재생 가능 여부 간단히 체크
-                                if '"status":"OK"' in response.text:
-                                    print(f"  ✅ 비디오 재생 가능")
-                                elif '"status":"UNPLAYABLE"' in response.text:
-                                    print(f"  ❌ 비디오 재생 불가")
-                                elif '"status":"LOGIN_REQUIRED"' in response.text:
-                                    print(f"  ❌ 로그인 필요 (연령 제한 등)")
-                        else:
-                            print(f"  ❌ YouTube 페이지 접근 실패: {response.status_code}")
-
-                    except Exception as req_err:
-                        print(f"  ⚠️  YouTube 페이지 확인 실패: {req_err}")
-
-                    # 더 자세한 디버깅 정보
-                    import traceback
-                    print(f"\n  스택 트레이스:")
-                    traceback.print_exc()
-                raise
-
-            # 우선순위 언어로 시도
-            transcript = None
-            used_language = None
-            is_generated = False
-
-            for lang in languages:
-                try:
-                    # 먼저 수동 자막 시도
-                    transcript = transcript_list.find_manually_created_transcript([lang])
-                    used_language = lang
-                    is_generated = False
-                    if self.verbose:
-                        print(f"  ✅ {lang} 수동 자막 발견")
-                    break
-                except NoTranscriptFound:
-                    if self.verbose:
-                        print(f"  ⚠️  {lang} 수동 자막 없음, 자동 생성 자막 시도...")
-
-                    # 수동 자막이 없으면 자동 생성 자막 시도
-                    try:
-                        transcript = transcript_list.find_generated_transcript([lang])
-                        used_language = lang
-                        is_generated = True
-                        if self.verbose:
-                            print(f"  ✅ {lang} 자동 생성 자막 발견")
-                        break
-                    except NoTranscriptFound:
-                        if self.verbose:
-                            print(f"  ⚠️  {lang} 자동 생성 자막도 없음, 다음 언어 시도...")
-                        continue
-
-            # 우선순위 언어가 없으면 사용 가능한 첫 번째 자막 사용
-            if not transcript:
-                try:
-                    available_transcripts = list(transcript_list)
-                    if available_transcripts:
-                        transcript = available_transcripts[0]
-                        used_language = transcript.language_code
-                        if self.verbose:
-                            print(f"  ℹ️  사용 가능한 자막 언어: {used_language}")
-                except Exception:
-                    pass
-
-            if not transcript:
-                if not self.verbose:
-                    print(f"❌ 사용 가능한 자막이 없습니다: {video_id}")
-                return None
+            transcript_data = YouTubeTranscriptApi.get_transcript(
+                video_id,
+                languages=languages
+            )
 
             if self.verbose:
-                print(f"\n  📋 선택된 자막:")
-                print(f"     객체: {transcript}")
-                print(f"     언어 코드: {used_language}")
-                print(f"     자동 생성: {is_generated}")
-                print(f"     language: {transcript.language}")
-                print(f"     language_code: {transcript.language_code}")
-
-                # 자막 객체의 내부 속성 확인
-                try:
-                    if hasattr(transcript, 'video_id'):
-                        print(f"     video_id: {transcript.video_id}")
-                    if hasattr(transcript, '_http_client'):
-                        print(f"     _http_client: {transcript._http_client}")
-                except:
-                    pass
-
-            # 자막 데이터 가져오기
-            try:
-                if self.verbose:
-                    print(f"\n  🔍 자막 데이터 fetch 시도 중...")
-
-                segments = transcript.fetch()
-
-                if self.verbose:
-                    print(f"  ✅ 자막 데이터 fetch 성공 ({len(segments)}개 세그먼트)")
-
-            except Exception as fetch_error:
-                print(f"❌ 자막 fetch 실패: {video_id}")
-                print(f"   선택된 자막: {used_language} ({'자동생성' if is_generated else '수동'})")
-                print(f"   오류 타입: {type(fetch_error).__name__}")
-                print(f"   오류 메시지: {fetch_error}")
-
-                if self.verbose:
-                    # 자막 URL 확인
-                    try:
-                        if hasattr(transcript, 'base_url'):
-                            print(f"\n  🔗 자막 URL: {transcript.base_url}")
-                    except:
-                        pass
-
-                    # 전체 스택 트레이스
-                    import traceback
-                    print(f"\n  📋 전체 스택 트레이스:")
-                    traceback.print_exc()
-
-                    # HTTP 요청 직접 시도해보기
-                    try:
-                        print(f"\n  🔍 자막 URL 직접 접근 시도...")
-                        # transcript 객체에서 URL 추출 시도
-                        import inspect
-                        print(f"  transcript 타입: {type(transcript)}")
-                        print(f"  transcript 속성: {dir(transcript)}")
-                    except Exception as debug_error:
-                        print(f"  디버깅 정보 수집 실패: {debug_error}")
-
-                return None
+                print(f"  ✅ 자막 데이터 조회 성공 ({len(transcript_data)}개 세그먼트)")
 
             # 전체 텍스트 생성
-            full_text = ' '.join([segment['text'] for segment in segments])
+            full_text = ' '.join([segment['text'] for segment in transcript_data])
+
+            # 사용된 언어 (첫 번째 우선순위 언어로 가정)
+            used_language = languages[0] if languages else 'unknown'
 
             if self.verbose:
                 print(f"\n{'='*80}")
                 print(f"📊 자막 정보")
                 print(f"{'='*80}")
                 print(f"언어: {used_language}")
-                print(f"유형: {'자동 생성' if is_generated else '수동 작성'}")
-                print(f"세그먼트 수: {len(segments)}개")
+                print(f"세그먼트 수: {len(transcript_data)}개")
                 print(f"전체 길이: {len(full_text)}자")
                 print(f"첫 100자: {full_text[:100]}...")
                 print(f"{'='*80}\n")
@@ -1021,12 +863,11 @@ class YouTubeAPIWrapper:
                 'video_id': video_id,
                 'transcript': full_text,
                 'language': used_language,
-                'is_generated': is_generated,
             }
 
             # verbose 모드에서는 세그먼트 정보도 포함
             if self.verbose:
-                transcript_info['segments'] = segments[:5]  # 첫 5개만
+                transcript_info['segments'] = transcript_data[:5]  # 첫 5개만
 
             # DB에 저장
             if self.save_to_db:
@@ -1034,49 +875,29 @@ class YouTubeAPIWrapper:
 
             # 간단한 요약 출력
             if not self.verbose:
-                subtitle_type = "자동생성" if is_generated else "수동"
-                print(f"✅ 자막 조회 완료: {video_id} ({subtitle_type}, 언어: {used_language}, {len(full_text)}자)")
+                print(f"✅ 자막 조회 완료: {video_id} (언어: {used_language}, {len(full_text)}자)")
 
             return transcript_info
 
         except TranscriptsDisabled:
-            if not self.verbose:
-                print(f"❌ 자막이 비활성화되어 있습니다: {video_id}")
-            else:
-                print(f"  ❌ 자막이 비활성화되어 있습니다")
+            print(f"❌ 자막이 비활성화되어 있습니다: {video_id}")
             return None
 
         except VideoUnavailable:
-            if not self.verbose:
-                print(f"❌ 비디오를 사용할 수 없습니다: {video_id}")
-            else:
-                print(f"  ❌ 비디오를 사용할 수 없습니다")
+            print(f"❌ 비디오를 사용할 수 없습니다: {video_id}")
+            return None
+
+        except NoTranscriptFound:
+            print(f"❌ 자막을 찾을 수 없습니다: {video_id} (언어: {', '.join(languages)})")
+            if self.verbose:
+                print(f"   요청한 언어의 자막이 없습니다.")
             return None
 
         except Exception as e:
-            error_msg = str(e)
-
-            # 일반적인 오류 패턴 파악
-            if "no element found" in error_msg.lower():
-                if not self.verbose:
-                    print(f"❌ 자막 조회 실패: {video_id}")
-                    print(f"   원인: YouTube에서 빈 응답을 받았습니다. 가능한 원인:")
-                    print(f"   - 비디오에 자막이 없음")
-                    print(f"   - 비디오가 비공개/삭제됨")
-                    print(f"   - 지역 제한이 걸려 있음")
-                else:
-                    print('error_msg:', error_msg)
-                    print(f"❌ XML 파싱 오류: YouTube에서 유효하지 않은 응답을 받았습니다")
-            else:
-                if not self.verbose:
-                    print(f"❌ 자막 조회 실패: {video_id} - {e}")
-                else:
-                    print(f"❌ 자막 조회 실패: {e}")
-
+            print(f"❌ 자막 조회 실패: {video_id} - {e}")
             if self.verbose:
                 import traceback
                 traceback.print_exc()
-
             return None
 
     def _get_video_details(self, video_ids: List[str]) -> Dict[str, Dict]:

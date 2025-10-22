@@ -123,6 +123,7 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_info 
 ```bash
 # 비디오 자막 조회 (기본: 한국어 우선, 없으면 영어)
 docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 6JYx7wGO5qQ
+docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript bUY3wNjcVMk
 
 # 특정 언어 우선순위 지정
 docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_transcript 6JYx7wGO5qQ --languages en,ko
@@ -139,14 +140,12 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_video_trans
 
 **기능:**
 - `youtube-transcript-api` 라이브러리 사용 (YouTube Data API 할당량 소비 없음)
-- **수동 자막 우선, 없으면 자동 생성 자막 사용**
-- 각 언어별로 수동 자막 → 자동 자막 순서로 시도
-- 우선순위 언어에 자막이 없으면 사용 가능한 첫 번째 자막 사용
+- **수동 자막과 자동 생성 자막 모두 지원** (라이브러리가 자동으로 처리)
+- 우선순위 언어 순서대로 자막 검색
 - 전체 자막을 하나의 텍스트로 결합하여 DB에 저장
-- 자막 유형(수동/자동) 정보도 함께 출력
 
 **옵션:**
-- `--languages ko,en`: 쉼표로 구분된 언어 코드 우선순위 (기본값: ko,en)
+- `--languages ko,en`: 쉼표로 구분된 언어 코드 우선순위 (기본값: ko)
 - `--no-db`: DB에 저장하지 않음
 - `--verbose`: 세그먼트 정보 및 타임스탬프 출력
 
