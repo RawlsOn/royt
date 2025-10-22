@@ -162,7 +162,45 @@ class YouTubeAPIWrapper:
             ]
         """
 
-        # 플레이리스트에서 영상 목록 가져오기
+        # 1. DB에서 uploads_playlist_id 조회 시도
+        uploads_playlist_id = None
+        channel_info = None
+
+        if self.save_to_db:
+            try:
+                from youtube.models import YouTubeChannel
+
+                # 채널 핸들(@username)인지 채널 ID인지 구분
+                if channel_identifier.startswith('@'):
+                    # 핸들인 경우 custom_url로 조회
+                    channel = YouTubeChannel.objects.filter(
+                        channel_custom_url=channel_identifier
+                    ).first()
+                else:
+                    # 채널 ID인 경우
+                    channel = YouTubeChannel.objects.filter(
+                        channel_id=channel_identifier
+                    ).first()
+
+                if channel and channel.uploads_playlist_id:
+                    uploads_playlist_id = channel.uploads_playlist_id
+                    print(f"  ✅ DB에서 uploads_playlist_id 캐시 사용: {uploads_playlist_id}")
+            except Exception as e:
+                print(f"  ⚠️  DB 조회 실패: {e}")
+
+        # 2. DB에 없으면 API로 채널 정보 조회
+        if not uploads_playlist_id:
+            print(f"  🔍 API로 채널 정보 조회 중...")
+            channel_info = self.get_channel_info(channel_identifier)
+            if not channel_info:
+                return []
+
+            uploads_playlist_id = channel_info.get("uploads_playlist_id")
+            if not uploads_playlist_id:
+                print(f"채널의 uploads_playlist_id를 찾을 수 없습니다: {channel_identifier}")
+                return []
+
+        # 3. 플레이리스트에서 영상 목록 가져오기
         videos = []
         next_page_token = None
 
@@ -235,7 +273,28 @@ class YouTubeAPIWrapper:
 
         # DB에 저장
         if self.save_to_db and videos:
-            self._save_videos_to_db(videos, channel_info)
+            # channel_info가 없으면 channel_identifier로부터 생성
+            if not channel_info:
+                # DB에서 채널 정보 조회
+                try:
+                    from youtube.models import YouTubeChannel
+
+                    if channel_identifier.startswith('@'):
+                        channel = YouTubeChannel.objects.filter(
+                            channel_custom_url=channel_identifier
+                        ).first()
+                    else:
+                        channel = YouTubeChannel.objects.filter(
+                            channel_id=channel_identifier
+                        ).first()
+
+                    if channel:
+                        channel_info = {'channel_id': channel.channel_id}
+                except Exception as e:
+                    print(f"  ⚠️  채널 정보 조회 실패: {e}")
+
+            if channel_info:
+                self._save_videos_to_db(videos, channel_info)
 
         # API 호출 요약 출력
         self._print_api_call_summary()
@@ -617,6 +676,7 @@ class YouTubeAPIWrapper:
                     'video_count': channel_info.get('video_count', 0),
                     'view_count': channel_info.get('view_count', 0),
                     'channel_keywords': channel_info.get('channel_keywords', ''),
+                    'uploads_playlist_id': channel_info.get('uploads_playlist_id', ''),
                 }
             )
 
