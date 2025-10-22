@@ -14,6 +14,11 @@ class YouTubeChannel(RoBase):
         db_index=True,
         verbose_name="채널 ID"
     )
+    uploads_playlist_id = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="업로드 플레이리스트 ID"
+    )
     channel_title = models.CharField(
         max_length=200,
         verbose_name="채널명"
