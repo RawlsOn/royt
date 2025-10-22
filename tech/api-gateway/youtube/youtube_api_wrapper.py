@@ -967,10 +967,10 @@ class YouTubeAPIWrapper:
                     import traceback
                     traceback.print_exc()
 
-                # 다른 자막으로 fallback 시도
-                print(f"\n  🔄 다른 자막으로 재시도 중...")
+                # 다른 자막으로 fallback 시도 (우선순위 언어만)
+                print(f"\n  🔄 우선순위 언어 내 다른 자막으로 재시도 중...")
 
-                # 사용 가능한 모든 자막으로 하나씩 시도
+                # 우선순위 언어의 다른 유형 자막만 시도
                 transcript_list_retry = YouTubeTranscriptApi.list_transcripts(video_id)
                 all_transcripts = list(transcript_list_retry)
 
@@ -980,6 +980,12 @@ class YouTubeAPIWrapper:
                 fallback_is_generated = None
 
                 for retry_transcript in all_transcripts:
+                    # 우선순위 언어가 아니면 건너뛰기
+                    if retry_transcript.language_code not in languages:
+                        if self.verbose:
+                            print(f"  ⏭️  건너뛰기: {retry_transcript.language_code} (우선순위 언어 아님)")
+                        continue
+
                     # 이미 시도한 자막은 건너뛰기
                     if retry_transcript.language_code == used_language and retry_transcript.is_generated == is_generated:
                         continue
@@ -1004,13 +1010,13 @@ class YouTubeAPIWrapper:
                             print(f"  ❌ 실패: {retry_error}")
                         continue
 
-                # 모든 자막 시도했는데도 실패
+                # 우선순위 언어의 모든 자막 시도했는데도 실패
                 if segments is None:
                     if not self.verbose:
-                        print(f"❌ 모든 자막 fetch 실패: {video_id}")
+                        print(f"❌ 우선순위 언어({', '.join(languages)}) 자막 fetch 실패: {video_id}")
                         print(f"   원본 오류: {fetch_error}")
                     else:
-                        print(f"\n  ❌ 사용 가능한 모든 자막을 시도했지만 fetch 실패")
+                        print(f"\n  ❌ 우선순위 언어({', '.join(languages)})의 모든 자막을 시도했지만 fetch 실패")
                     return None
 
                 # fallback 성공 시 언어 정보 업데이트
