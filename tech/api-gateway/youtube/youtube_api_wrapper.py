@@ -838,7 +838,8 @@ class YouTubeAPIWrapper:
                 print(f"  ✅ 자막 데이터 조회 성공 ({len(transcript_data)}개 세그먼트)")
 
             # 전체 텍스트 생성
-            full_text = ' '.join([segment['text'] for segment in transcript_data])
+            # FetchedTranscriptSnippet 객체는 .text, .start, .duration 속성으로 접근
+            full_text = ' '.join([segment.text for segment in transcript_data])
 
             # 사용된 언어
             used_language = languages[0] if languages else 'unknown'
@@ -859,9 +860,16 @@ class YouTubeAPIWrapper:
                 'language': used_language,
             }
 
-            # verbose 모드에서는 세그먼트 정보도 포함
+            # verbose 모드에서는 세그먼트 정보도 포함 (딕셔너리로 변환)
             if self.verbose:
-                transcript_info['segments'] = transcript_data[:5]  # 첫 5개만
+                transcript_info['segments'] = [
+                    {
+                        'text': seg.text,
+                        'start': seg.start,
+                        'duration': seg.duration
+                    }
+                    for seg in transcript_data[:5]  # 첫 5개만
+                ]
 
             # DB에 저장
             if self.save_to_db:
