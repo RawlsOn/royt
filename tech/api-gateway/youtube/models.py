@@ -195,19 +195,6 @@ class YouTubeVideo(RoBase):
         help_text="success: 성공, no_transcript: 자막 없음, disabled: 비활성화, unavailable: 비디오 사용 불가, error: 기타 오류"
     )
 
-    # 정리된 자막 정보
-    refined_transcript = models.TextField(
-        blank=True,
-        verbose_name="정리된 자막 (AI 수정)"
-    )
-    refined_transcript_status = models.CharField(
-        max_length=20,
-        blank=True,
-        db_index=True,
-        verbose_name="자막 정리 상태",
-        help_text="pending: 대기, processing: 처리 중, completed: 완료, failed: 실패"
-    )
-
     class Meta:
         ordering = ['-view_count', '-published_at']
         verbose_name = "YouTube 영상"
