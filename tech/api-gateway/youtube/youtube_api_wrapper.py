@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.utils import timezone
 from youtube.models import YouTubeChannel, YouTubeVideo
+from common.util.print_util import tprint, tprint_header, tprint_separator
 
 
 class YouTubeAPIWrapper:
@@ -19,14 +20,14 @@ class YouTubeAPIWrapper:
 
     BASE_URL = "https://www.googleapis.com/youtube/v3"
 
-    def __init__(self, api_key: Optional[str] = None, save_to_db: bool = True, verbose: bool = False):
+    def __init__(self, api_key: Optional[str] = None, save_to_db: bool = True, verbose: bool = True):
         """
         YouTube API 래퍼 초기화
 
         Args:
             api_key: YouTube Data API v3 키 (None이면 settings.YOUTUBE_API_KEY 사용)
             save_to_db: API 호출 결과를 DB에 저장할지 여부 (기본값: True)
-            verbose: 상세 로그 출력 여부 (기본값: False)
+            verbose: 상세 로그 출력 여부 (기본값: True)
         """
         self.api_key = api_key or getattr(settings, 'YOUTUBE_API_KEY', None)
         if not self.api_key:
@@ -87,16 +88,18 @@ class YouTubeAPIWrapper:
 
             # 원본 API 응답 출력 (verbose 모드)
             if self.verbose:
-                print("\n" + "="*80)
-                print("📡 YouTube API 원본 응답 (JSON)")
-                print("="*80)
-                print(json.dumps(data, indent=2, ensure_ascii=False))
-                print("="*80 + "\n")
+                ttprint()
+                tprint_separator("=", 80)
+                ttprint("📡 YouTube API 원본 응답 (JSON)")
+                tprint_separator("=", 80)
+                ttprint(json.dumps(data, indent=2, ensure_ascii=False))
+                tprint_separator("=", 80)
+                ttprint()
 
             items = data.get("items", [])
             if not items:
                 if self.verbose:
-                    print(f"채널을 찾을 수 없습니다: {channel_identifier}")
+                    ttprint(f"채널을 찾을 수 없습니다: {channel_identifier}")
                 self._print_api_call_summary()
                 return None
 
@@ -127,7 +130,7 @@ class YouTubeAPIWrapper:
 
             # 간단한 요약 출력
             if not self.verbose:
-                print(f"✅ 채널 정보 조회 완료: {channel_info['channel_title']} (구독자: {channel_info['subscriber_count']:,}명)")
+                tprint(f"✅ 채널 정보 조회 완료: {channel_info['channel_title']} (구독자: {channel_info['subscriber_count']:,}명)")
 
             # API 호출 요약 출력
             self._print_api_call_summary()
@@ -140,7 +143,7 @@ class YouTubeAPIWrapper:
             self._print_api_call_summary()
             return None
         except requests.exceptions.RequestException as e:
-            print(f"YouTube API 요청 실패: {e}")
+            ttprint(f"YouTube API 요청 실패: {e}")
             self._print_api_call_summary()
             return None
 
@@ -196,15 +199,15 @@ class YouTubeAPIWrapper:
                 if channel and channel.uploads_playlist_id:
                     uploads_playlist_id = channel.uploads_playlist_id
                     if self.verbose:
-                        print(f"  ✅ DB에서 uploads_playlist_id 캐시 사용: {uploads_playlist_id}")
+                        tprint(f"  ✅ DB에서 uploads_playlist_id 캐시 사용: {uploads_playlist_id}")
             except Exception as e:
                 if self.verbose:
-                    print(f"  ⚠️  DB 조회 실패: {e}")
+                    tprint(f"  ⚠️  DB 조회 실패: {e}")
 
         # 2. DB에 없으면 API로 채널 정보 조회
         if not uploads_playlist_id:
             if self.verbose:
-                print(f"  🔍 API로 채널 정보 조회 중...")
+                tprint(f"  🔍 API로 채널 정보 조회 중...")
             channel_info = self.get_channel_info(channel_identifier)
             if not channel_info:
                 return []
@@ -212,7 +215,7 @@ class YouTubeAPIWrapper:
             uploads_playlist_id = channel_info.get("uploads_playlist_id")
             if not uploads_playlist_id:
                 if self.verbose:
-                    print(f"채널의 uploads_playlist_id를 찾을 수 없습니다: {channel_identifier}")
+                    tprint(f"채널의 uploads_playlist_id를 찾을 수 없습니다: {channel_identifier}")
                 return []
 
         # 3. 플레이리스트에서 영상 목록 가져오기
@@ -241,11 +244,13 @@ class YouTubeAPIWrapper:
 
                 # 원본 API 응답 출력 (verbose 모드)
                 if self.verbose:
-                    print("\n" + "="*80)
-                    print("📡 YouTube API 원본 응답 (playlistItems)")
-                    print("="*80)
-                    print(json.dumps(data, indent=2, ensure_ascii=False))
-                    print("="*80 + "\n")
+                    ttprint()
+                    tprint_separator("=", 80)
+                    ttprint("📡 YouTube API 원본 응답 (playlistItems)")
+                    tprint_separator("=", 80)
+                    ttprint(json.dumps(data, indent=2, ensure_ascii=False))
+                    tprint_separator("=", 80)
+                    ttprint()
 
                 items = data.get("items", [])
                 if not items:
@@ -284,7 +289,7 @@ class YouTubeAPIWrapper:
                 self._handle_http_error(e, response)
                 break
             except requests.exceptions.RequestException as e:
-                print(f"YouTube API 요청 실패: {e}")
+                ttprint(f"YouTube API 요청 실패: {e}")
                 break
 
         # DB에 저장
@@ -308,14 +313,14 @@ class YouTubeAPIWrapper:
                         channel_info = {'channel_id': channel.channel_id}
                 except Exception as e:
                     if self.verbose:
-                        print(f"  ⚠️  채널 정보 조회 실패: {e}")
+                        tprint(f"  ⚠️  채널 정보 조회 실패: {e}")
 
             if channel_info:
                 self._save_videos_to_db(videos, channel_info)
 
         # 간단한 요약 출력
         if not self.verbose:
-            print(f"✅ 채널 영상 목록 조회 완료: {len(videos[:max_results])}개")
+            tprint(f"✅ 채널 영상 목록 조회 완료: {len(videos[:max_results])}개")
 
         # API 호출 요약 출력
         self._print_api_call_summary()
@@ -346,17 +351,17 @@ class YouTubeAPIWrapper:
         cutoff_date = datetime.now() - timedelta(days=months * 30)
 
         if self.verbose:
-            print(f"\n{'='*80}")
-            print(f"📅 최근 {months}개월 영상 저장 시작")
-            print(f"   기준 날짜: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"{'='*80}\n")
+            tprint(f"\n{'='*80}")
+            tprint(f"📅 최근 {months}개월 영상 저장 시작")
+            tprint(f"   기준 날짜: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')}")
+            tprint(f"{'='*80}\n")
 
         # list_channel_videos로 영상 목록 조회
         videos = self.list_channel_videos(channel_identifier, max_results=max_results)
 
         if not videos:
             if not self.verbose:
-                print("❌ 조회된 영상이 없습니다.")
+                tprint("❌ 조회된 영상이 없습니다.")
             return []
 
         # 최근 N개월 이내의 영상만 필터링
@@ -384,24 +389,24 @@ class YouTubeAPIWrapper:
                         break
             except Exception as e:
                 if self.verbose:
-                    print(f"  ⚠️  날짜 파싱 실패: {video.get('video_id')} - {e}")
+                    tprint(f"  ⚠️  날짜 파싱 실패: {video.get('video_id')} - {e}")
                 continue
 
         # 필터링된 영상 정보 출력
         if self.verbose:
-            print(f"\n{'='*80}")
-            print(f"📊 필터링 결과")
-            print(f"{'='*80}")
-            print(f"전체 조회 영상: {len(videos)}개")
-            print(f"최근 {months}개월 영상: {len(recent_videos)}개")
-            print(f"{'='*80}\n")
+            tprint(f"\n{'='*80}")
+            tprint(f"📊 필터링 결과")
+            tprint(f"{'='*80}")
+            tprint(f"전체 조회 영상: {len(videos)}개")
+            tprint(f"최근 {months}개월 영상: {len(recent_videos)}개")
+            tprint(f"{'='*80}\n")
 
         # DB에 저장 (save_to_db가 True인 경우 이미 list_channel_videos에서 저장됨)
         # 하지만 필터링된 영상만 반환
 
         # 간단한 요약 출력
         if not self.verbose:
-            print(f"✅ 최근 {months}개월 영상 {len(recent_videos)}개 필터링 완료 (전체 {len(videos)}개 중)")
+            tprint(f"✅ 최근 {months}개월 영상 {len(recent_videos)}개 필터링 완료 (전체 {len(videos)}개 중)")
 
         return recent_videos
 
@@ -432,10 +437,10 @@ class YouTubeAPIWrapper:
             cutoff_date = datetime.now() - timedelta(days=months * 30)
 
             if self.verbose:
-                print(f"\n{'='*80}")
-                print(f"🗑️  {months}개월 이상 된 영상 삭제 시작")
-                print(f"   기준 날짜: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')}")
-                print(f"{'='*80}\n")
+                tprint(f"\n{'='*80}")
+                tprint(f"🗑️  {months}개월 이상 된 영상 삭제 시작")
+                tprint(f"   기준 날짜: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')}")
+                tprint(f"{'='*80}\n")
 
             # 채널 필터링
             videos_query = YouTubeVideo.objects.filter(published_at__lt=cutoff_date)
@@ -456,7 +461,7 @@ class YouTubeAPIWrapper:
 
                 if not channel:
                     if not self.verbose:
-                        print(f"❌ 채널을 찾을 수 없습니다: {channel_identifier}")
+                        tprint(f"❌ 채널을 찾을 수 없습니다: {channel_identifier}")
                     return {
                         'deleted_count': 0,
                         'channel_id': None,
@@ -467,14 +472,14 @@ class YouTubeAPIWrapper:
                 videos_query = videos_query.filter(channel=channel)
 
                 if self.verbose:
-                    print(f"  📌 특정 채널만 삭제: {channel.channel_title} ({channel_id})")
+                    tprint(f"  📌 특정 채널만 삭제: {channel.channel_title} ({channel_id})")
 
             # 삭제 전 카운트
             old_videos_count = videos_query.count()
 
             if old_videos_count == 0:
                 if not self.verbose:
-                    print(f"✅ 삭제할 오래된 영상이 없습니다.")
+                    tprint(f"✅ 삭제할 오래된 영상이 없습니다.")
                 return {
                     'deleted_count': 0,
                     'channel_id': channel_id,
@@ -483,18 +488,18 @@ class YouTubeAPIWrapper:
 
             # verbose 모드일 때 삭제될 영상 목록 출력
             if self.verbose:
-                print(f"\n{'='*80}")
-                print(f"📋 삭제 대상 영상 목록 (총 {old_videos_count}개)")
-                print(f"{'='*80}")
+                tprint(f"\n{'='*80}")
+                tprint(f"📋 삭제 대상 영상 목록 (총 {old_videos_count}개)")
+                tprint(f"{'='*80}")
                 for video in videos_query[:10]:
-                    print(f"- {video.title[:60]}")
-                    print(f"  게시일: {video.published_at.strftime('%Y-%m-%d') if video.published_at else 'N/A'}")
-                    print(f"  비디오 ID: {video.video_id}")
-                    print()
+                    tprint(f"- {video.title[:60]}")
+                    tprint(f"  게시일: {video.published_at.strftime('%Y-%m-%d') if video.published_at else 'N/A'}")
+                    tprint(f"  비디오 ID: {video.video_id}")
+                    tprint()
 
                 if old_videos_count > 10:
-                    print(f"... 외 {old_videos_count - 10}개")
-                print(f"{'='*80}\n")
+                    tprint(f"... 외 {old_videos_count - 10}개")
+                tprint(f"{'='*80}\n")
 
             # 삭제 실행
             deleted_count, _ = videos_query.delete()
@@ -502,21 +507,21 @@ class YouTubeAPIWrapper:
             # 결과 출력
             if not self.verbose:
                 if channel_identifier:
-                    print(f"✅ {months}개월 이상 된 영상 {deleted_count}개 삭제 완료 (채널: {channel_identifier})")
+                    tprint(f"✅ {months}개월 이상 된 영상 {deleted_count}개 삭제 완료 (채널: {channel_identifier})")
                 else:
-                    print(f"✅ {months}개월 이상 된 영상 {deleted_count}개 삭제 완료 (모든 채널)")
+                    tprint(f"✅ {months}개월 이상 된 영상 {deleted_count}개 삭제 완료 (모든 채널)")
 
             if self.verbose:
-                print(f"\n{'='*80}")
-                print(f"📊 삭제 완료")
-                print(f"{'='*80}")
-                print(f"삭제된 영상 수: {deleted_count}개")
+                tprint(f"\n{'='*80}")
+                tprint(f"📊 삭제 완료")
+                tprint(f"{'='*80}")
+                tprint(f"삭제된 영상 수: {deleted_count}개")
                 if channel_identifier:
-                    print(f"대상 채널: {channel_identifier}")
+                    tprint(f"대상 채널: {channel_identifier}")
                 else:
-                    print(f"대상 채널: 모든 채널")
-                print(f"기준 날짜: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')} 이전")
-                print(f"{'='*80}\n")
+                    tprint(f"대상 채널: 모든 채널")
+                tprint(f"기준 날짜: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')} 이전")
+                tprint(f"{'='*80}\n")
 
             return {
                 'deleted_count': deleted_count,
@@ -526,11 +531,11 @@ class YouTubeAPIWrapper:
 
         except Exception as e:
             if self.verbose:
-                print(f"❌ 영상 삭제 실패: {e}")
+                tprint(f"❌ 영상 삭제 실패: {e}")
                 import traceback
                 traceback.print_exc()
             else:
-                print(f"❌ 영상 삭제 실패: {e}")
+                tprint(f"❌ 영상 삭제 실패: {e}")
 
             return {
                 'deleted_count': 0,
@@ -580,7 +585,7 @@ class YouTubeAPIWrapper:
 
         channel_id = channel_info.get("channel_id")
         if not channel_id:
-            print(f"채널 ID를 찾을 수 없습니다: {channel_identifier}")
+            tprint(f"채널 ID를 찾을 수 없습니다: {channel_identifier}")
             return []
 
         # 2. search API로 영상 검색
@@ -615,11 +620,11 @@ class YouTubeAPIWrapper:
 
                 # 원본 API 응답 출력 (verbose 모드)
                 if self.verbose:
-                    print("\n" + "="*80)
-                    print("📡 YouTube API 원본 응답 (search)")
-                    print("="*80)
-                    print(json.dumps(data, indent=2, ensure_ascii=False))
-                    print("="*80 + "\n")
+                    tprint("\n" + "="*80)
+                    tprint("📡 YouTube API 원본 응답 (search)")
+                    tprint("="*80)
+                    tprint(json.dumps(data, indent=2, ensure_ascii=False))
+                    tprint("="*80 + "\n")
 
                 items = data.get("items", [])
                 if not items:
@@ -672,7 +677,7 @@ class YouTubeAPIWrapper:
                 break
             except requests.exceptions.RequestException as e:
                 if self.verbose:
-                    print(f"YouTube API 요청 실패: {e}")
+                    ttprint(f"YouTube API 요청 실패: {e}")
                 break
 
         # DB에 저장
@@ -681,7 +686,7 @@ class YouTubeAPIWrapper:
 
         # 간단한 요약 출력
         if not self.verbose:
-            print(f"✅ 채널 영상 검색 완료: {len(videos[:max_results])}개 (정렬: {order})")
+            tprint(f"✅ 채널 영상 검색 완료: {len(videos[:max_results])}개 (정렬: {order})")
 
         # API 호출 요약 출력
         self._print_api_call_summary()
@@ -732,16 +737,16 @@ class YouTubeAPIWrapper:
 
             # 원본 API 응답 출력 (verbose 모드)
             if self.verbose:
-                print("\n" + "="*80)
-                print("📡 YouTube API 원본 응답 (videos - get_video_info)")
-                print("="*80)
-                print(json.dumps(data, indent=2, ensure_ascii=False))
-                print("="*80 + "\n")
+                tprint("\n" + "="*80)
+                tprint("📡 YouTube API 원본 응답 (videos - get_video_info)")
+                tprint("="*80)
+                tprint(json.dumps(data, indent=2, ensure_ascii=False))
+                tprint("="*80 + "\n")
 
             items = data.get("items", [])
             if not items:
                 if self.verbose:
-                    print(f"비디오를 찾을 수 없습니다: {video_id}")
+                    tprint(f"비디오를 찾을 수 없습니다: {video_id}")
                 self._print_api_call_summary()
                 return None
 
@@ -778,7 +783,7 @@ class YouTubeAPIWrapper:
 
             # 간단한 요약 출력
             if not self.verbose:
-                print(f"✅ 비디오 정보 조회 완료: {video_info['title'][:50]} (조회수: {video_info['view_count']:,})")
+                tprint(f"✅ 비디오 정보 조회 완료: {video_info['title'][:50]} (조회수: {video_info['view_count']:,})")
 
             # API 호출 요약 출력
             self._print_api_call_summary()
@@ -791,7 +796,7 @@ class YouTubeAPIWrapper:
             self._print_api_call_summary()
             return None
         except requests.exceptions.RequestException as e:
-            print(f"YouTube API 요청 실패: {e}")
+            ttprint(f"YouTube API 요청 실패: {e}")
             self._print_api_call_summary()
             return None
 
@@ -830,14 +835,14 @@ class YouTubeAPIWrapper:
                 # 성공한 경우 - 자막 반환
                 if existing_video.transcript_status == 'success' and existing_video.transcript:
                     if self.verbose:
-                        print(f"\n{'='*80}")
-                        print(f"📝 자막 조회: {video_id}")
-                        print(f"{'='*80}\n")
-                        print(f"  ✅ DB에 이미 자막이 저장되어 있습니다")
-                        print(f"     언어: {existing_video.transcript_language}")
-                        print(f"     길이: {len(existing_video.transcript)}자")
+                        tprint(f"\n{'='*80}")
+                        tprint(f"📝 자막 조회: {video_id}")
+                        tprint(f"{'='*80}\n")
+                        tprint(f"  ✅ DB에 이미 자막이 저장되어 있습니다")
+                        tprint(f"     언어: {existing_video.transcript_language}")
+                        tprint(f"     길이: {len(existing_video.transcript)}자")
                     else:
-                        print(f"✅ DB에서 자막 조회: {video_id} (언어: {existing_video.transcript_language}, {len(existing_video.transcript)}자)")
+                        tprint(f"✅ DB에서 자막 조회: {video_id} (언어: {existing_video.transcript_language}, {len(existing_video.transcript)}자)")
 
                     return {
                         'video_id': video_id,
@@ -849,7 +854,7 @@ class YouTubeAPIWrapper:
                 # 실패한 경우 - 다시 시도하지 않음
                 else:
                     if not self.verbose:
-                        print(f"⏭️  이전 시도 기록: {existing_video.transcript_status} (건너뛰기)")
+                        tprint(f"⏭️  이전 시도 기록: {existing_video.transcript_status} (건너뛰기)")
 
                     return {
                         'video_id': video_id,
@@ -865,20 +870,20 @@ class YouTubeAPIWrapper:
             from youtube_transcript_api import YouTubeTranscriptApi
 
             if self.verbose:
-                print(f"\n{'='*80}")
-                print(f"📝 자막 조회 시작: {video_id}")
-                print(f"   우선 언어: {', '.join(languages)}")
-                print(f"{'='*80}\n")
+                tprint(f"\n{'='*80}")
+                tprint(f"📝 자막 조회 시작: {video_id}")
+                tprint(f"   우선 언어: {', '.join(languages)}")
+                tprint(f"{'='*80}\n")
 
             # 공식 PyPI 문서의 권장 방법: fetch() 메서드 사용
             if self.verbose:
-                print(f"  🔍 YouTube에서 자막 데이터 조회 중...")
+                tprint(f"  🔍 YouTube에서 자막 데이터 조회 중...")
 
             ytt_api = YouTubeTranscriptApi()
             transcript_data = ytt_api.fetch(video_id, languages=languages)
 
             if self.verbose:
-                print(f"  ✅ 자막 데이터 조회 성공 ({len(transcript_data)}개 세그먼트)")
+                tprint(f"  ✅ 자막 데이터 조회 성공 ({len(transcript_data)}개 세그먼트)")
 
             # 전체 텍스트 생성
             # FetchedTranscriptSnippet 객체는 .text, .start, .duration 속성으로 접근
@@ -888,14 +893,14 @@ class YouTubeAPIWrapper:
             used_language = languages[0] if languages else 'unknown'
 
             if self.verbose:
-                print(f"\n{'='*80}")
-                print(f"📊 자막 정보")
-                print(f"{'='*80}")
-                print(f"언어: {used_language}")
-                print(f"세그먼트 수: {len(transcript_data)}개")
-                print(f"전체 길이: {len(full_text)}자")
-                print(f"첫 100자: {full_text[:100]}...")
-                print(f"{'='*80}\n")
+                tprint(f"\n{'='*80}")
+                tprint(f"📊 자막 정보")
+                tprint(f"{'='*80}")
+                tprint(f"언어: {used_language}")
+                tprint(f"세그먼트 수: {len(transcript_data)}개")
+                tprint(f"전체 길이: {len(full_text)}자")
+                tprint(f"첫 100자: {full_text[:100]}...")
+                tprint(f"{'='*80}\n")
 
             transcript_info = {
                 'video_id': video_id,
@@ -920,7 +925,7 @@ class YouTubeAPIWrapper:
 
             # 간단한 요약 출력
             if not self.verbose:
-                print(f"✅ 자막 조회 완료: {video_id} (언어: {used_language}, {len(full_text)}자)")
+                tprint(f"✅ 자막 조회 완료: {video_id} (언어: {used_language}, {len(full_text)}자)")
 
             return transcript_info
 
@@ -931,18 +936,18 @@ class YouTubeAPIWrapper:
             # 에러 타입별 처리 및 상태 저장
             status = 'error'
             if 'TranscriptsDisabled' in error_type:
-                print(f"❌ 자막이 비활성화되어 있습니다: {video_id}")
+                tprint(f"❌ 자막이 비활성화되어 있습니다: {video_id}")
                 status = 'disabled'
             elif 'VideoUnavailable' in error_type:
-                print(f"❌ 비디오를 사용할 수 없습니다: {video_id}")
+                tprint(f"❌ 비디오를 사용할 수 없습니다: {video_id}")
                 status = 'unavailable'
             elif 'NoTranscriptFound' in error_type:
-                print(f"❌ 자막을 찾을 수 없습니다: {video_id} (언어: {', '.join(languages)})")
+                tprint(f"❌ 자막을 찾을 수 없습니다: {video_id} (언어: {', '.join(languages)})")
                 if self.verbose:
-                    print(f"   요청한 언어의 자막이 없습니다.")
+                    tprint(f"   요청한 언어의 자막이 없습니다.")
                 status = 'no_transcript'
             else:
-                print(f"❌ 자막 조회 실패: {video_id} - {e}")
+                tprint(f"❌ 자막 조회 실패: {video_id} - {e}")
                 status = 'error'
 
             # DB에 상태 저장
@@ -984,12 +989,12 @@ class YouTubeAPIWrapper:
         if languages is None:
             languages = ['ko']
 
-        print(f"\n{'='*80}")
-        print(f"📝 채널 영상 자막 일괄 저장")
-        print(f"{'='*80}")
-        print(f"채널: {channel_identifier}")
-        print(f"언어: {', '.join(languages)}")
-        print(f"{'='*80}\n")
+        tprint(f"\n{'='*80}")
+        tprint(f"📝 채널 영상 자막 일괄 저장")
+        tprint(f"{'='*80}")
+        tprint(f"채널: {channel_identifier}")
+        tprint(f"언어: {', '.join(languages)}")
+        tprint(f"{'='*80}\n")
 
         # DB에서 채널의 모든 영상 가져오기
         try:
@@ -1000,8 +1005,8 @@ class YouTubeAPIWrapper:
                 # 채널 ID로 조회
                 channel = YouTubeChannel.objects.get(channel_id=channel_identifier)
         except YouTubeChannel.DoesNotExist:
-            print(f"❌ 채널을 찾을 수 없습니다: {channel_identifier}")
-            print(f"   먼저 get_channel_info로 채널 정보를 저장해 주세요.")
+            tprint(f"❌ 채널을 찾을 수 없습니다: {channel_identifier}")
+            tprint(f"   먼저 get_channel_info로 채널 정보를 저장해 주세요.")
             return {'total': 0, 'success': 0, 'failed': 0, 'skipped': 0}
 
         # 채널의 모든 영상 가져오기
@@ -1009,12 +1014,12 @@ class YouTubeAPIWrapper:
         total_count = videos.count()
 
         if total_count == 0:
-            print(f"❌ 채널에 저장된 영상이 없습니다: {channel.channel_title}")
-            print(f"   먼저 list_channel_videos로 영상 목록을 저장해 주세요.")
+            tprint(f"❌ 채널에 저장된 영상이 없습니다: {channel.channel_title}")
+            tprint(f"   먼저 list_channel_videos로 영상 목록을 저장해 주세요.")
             return {'total': 0, 'success': 0, 'failed': 0, 'skipped': 0}
 
-        print(f"📊 총 {total_count}개 영상 발견")
-        print(f"{'='*80}\n")
+        tprint(f"📊 총 {total_count}개 영상 발견")
+        tprint(f"{'='*80}\n")
 
         success_count = 0
         failed_count = 0
@@ -1022,14 +1027,14 @@ class YouTubeAPIWrapper:
 
         for idx, video in enumerate(videos, 1):
             # 진행 상황 출력
-            print(f"[{idx}/{total_count}] {video.title[:50]}...")
+            tprint(f"[{idx}/{total_count}] {video.title[:50]}...")
 
             # 이미 시도한 적이 있으면 건너뛰기
             if video.transcript_status:
                 if video.transcript_status == 'success':
-                    print(f"  ⏭️  이미 자막 있음 (건너뛰기)")
+                    tprint(f"  ⏭️  이미 자막 있음 (건너뛰기)")
                 else:
-                    print(f"  ⏭️  이전 시도: {video.transcript_status} (건너뛰기)")
+                    tprint(f"  ⏭️  이전 시도: {video.transcript_status} (건너뛰기)")
                 skipped_count += 1
                 continue
 
@@ -1056,23 +1061,23 @@ class YouTubeAPIWrapper:
                 is_blocked = any(keyword in error_msg for keyword in ip_block_keywords)
 
                 if is_blocked:
-                    print(f"\n{'='*80}")
-                    print(f"🚫 YouTube IP 블락 감지!")
-                    print(f"{'='*80}")
-                    print(f"YouTube에서 IP 차단을 감지했습니다.")
-                    print(f"에러: {result['error'][:200]}...")
-                    print(f"\n작업을 중단합니다.")
-                    print(f"\n현재까지 결과:")
-                    print(f"  처리: {idx}/{total_count}개")
-                    print(f"  성공: {success_count}개")
-                    print(f"  실패: {failed_count}개")
-                    print(f"  건너뛰기: {skipped_count}개")
-                    print(f"{'='*80}\n")
-                    print(f"💡 해결 방법:")
-                    print(f"  - 잠시 후에 다시 시도하세요")
-                    print(f"  - 프록시나 VPN을 사용하세요")
-                    print(f"  - 다른 네트워크에서 시도하세요")
-                    print(f"{'='*80}\n")
+                    tprint(f"\n{'='*80}")
+                    tprint(f"🚫 YouTube IP 블락 감지!")
+                    tprint(f"{'='*80}")
+                    tprint(f"YouTube에서 IP 차단을 감지했습니다.")
+                    tprint(f"에러: {result['error'][:200]}...")
+                    tprint(f"\n작업을 중단합니다.")
+                    tprint(f"\n현재까지 결과:")
+                    tprint(f"  처리: {idx}/{total_count}개")
+                    tprint(f"  성공: {success_count}개")
+                    tprint(f"  실패: {failed_count}개")
+                    tprint(f"  건너뛰기: {skipped_count}개")
+                    tprint(f"{'='*80}\n")
+                    tprint(f"💡 해결 방법:")
+                    tprint(f"  - 잠시 후에 다시 시도하세요")
+                    tprint(f"  - 프록시나 VPN을 사용하세요")
+                    tprint(f"  - 다른 네트워크에서 시도하세요")
+                    tprint(f"{'='*80}\n")
                     return {
                         'total': total_count,
                         'success': success_count,
@@ -1090,20 +1095,20 @@ class YouTubeAPIWrapper:
             # IP 블락 방지를 위한 랜덤 sleep (180~300초)
             if idx < total_count:  # 마지막 영상이 아니면
                 sleep_time = random.uniform(180, 300)
-                print(f"  ⏱️  대기 중... ({sleep_time:.1f}초)")
+                tprint(f"  ⏱️  대기 중... ({sleep_time:.1f}초)")
                 time.sleep(sleep_time)
 
-            print()  # 빈 줄
+            tprint()  # 빈 줄
 
         # 최종 결과
-        print(f"{'='*80}")
-        print(f"📊 자막 저장 완료")
-        print(f"{'='*80}")
-        print(f"전체: {total_count}개")
-        print(f"성공: {success_count}개")
-        print(f"실패: {failed_count}개")
-        print(f"건너뛰기: {skipped_count}개 (이미 DB에 있음)")
-        print(f"{'='*80}\n")
+        tprint(f"{'='*80}")
+        tprint(f"📊 자막 저장 완료")
+        tprint(f"{'='*80}")
+        tprint(f"전체: {total_count}개")
+        tprint(f"성공: {success_count}개")
+        tprint(f"실패: {failed_count}개")
+        tprint(f"건너뛰기: {skipped_count}개 (이미 DB에 있음)")
+        tprint(f"{'='*80}\n")
 
         return {
             'total': total_count,
@@ -1127,7 +1132,7 @@ class YouTubeAPIWrapper:
 
         # 최대 50개씩만 처리
         if len(video_ids) > 50:
-            print(f"경고: 한 번에 최대 50개의 비디오만 처리 가능합니다. (요청: {len(video_ids)}개)")
+            tprint(f"경고: 한 번에 최대 50개의 비디오만 처리 가능합니다. (요청: {len(video_ids)}개)")
             video_ids = video_ids[:50]
 
         url = f"{self.BASE_URL}/videos"
@@ -1149,11 +1154,11 @@ class YouTubeAPIWrapper:
 
             # 원본 API 응답 출력 (verbose 모드)
             if self.verbose:
-                print("\n" + "="*80)
-                print("📡 YouTube API 원본 응답 (videos - details)")
-                print("="*80)
-                print(json.dumps(data, indent=2, ensure_ascii=False))
-                print("="*80 + "\n")
+                tprint("\n" + "="*80)
+                tprint("📡 YouTube API 원본 응답 (videos - details)")
+                tprint("="*80)
+                tprint(json.dumps(data, indent=2, ensure_ascii=False))
+                tprint("="*80 + "\n")
 
             for item in data.get("items", []):
                 video_id = item.get("id")
@@ -1169,7 +1174,7 @@ class YouTubeAPIWrapper:
             self.api_call_count += 1
             self._handle_http_error(e, response)
         except requests.exceptions.RequestException as e:
-            print(f"YouTube API 요청 실패: {e}")
+            ttprint(f"YouTube API 요청 실패: {e}")
 
         return details_map
 
@@ -1189,7 +1194,7 @@ class YouTubeAPIWrapper:
 
         # 최대 50개씩만 처리
         if len(video_ids) > 50:
-            print(f"경고: 한 번에 최대 50개의 비디오만 처리 가능합니다. (요청: {len(video_ids)}개)")
+            tprint(f"경고: 한 번에 최대 50개의 비디오만 처리 가능합니다. (요청: {len(video_ids)}개)")
             video_ids = video_ids[:50]
 
         url = f"{self.BASE_URL}/videos"
@@ -1211,11 +1216,11 @@ class YouTubeAPIWrapper:
 
             # 원본 API 응답 출력 (verbose 모드)
             if self.verbose:
-                print("\n" + "="*80)
-                print("📡 YouTube API 원본 응답 (videos - durations)")
-                print("="*80)
-                print(json.dumps(data, indent=2, ensure_ascii=False))
-                print("="*80 + "\n")
+                tprint("\n" + "="*80)
+                tprint("📡 YouTube API 원본 응답 (videos - durations)")
+                tprint("="*80)
+                tprint(json.dumps(data, indent=2, ensure_ascii=False))
+                tprint("="*80 + "\n")
 
             for item in data.get("items", []):
                 video_id = item.get("id")
@@ -1226,7 +1231,7 @@ class YouTubeAPIWrapper:
             self.api_call_count += 1
             self._handle_http_error(e, response)
         except requests.exceptions.RequestException as e:
-            print(f"YouTube API 요청 실패: {e}")
+            ttprint(f"YouTube API 요청 실패: {e}")
 
         return durations_map
 
@@ -1279,41 +1284,41 @@ class YouTubeAPIWrapper:
 
         # 간단한 에러 메시지 (항상 출력)
         if status_code == 401:
-            print("❌ API 키 인증 실패 (401)")
+            tprint("❌ API 키 인증 실패 (401)")
         elif status_code == 403:
-            print("❌ 접근 거부 (403) - API 할당량 초과 가능성")
+            tprint("❌ 접근 거부 (403) - API 할당량 초과 가능성")
         elif status_code == 404:
-            print("❌ 리소스를 찾을 수 없음 (404)")
+            tprint("❌ 리소스를 찾을 수 없음 (404)")
         else:
-            print(f"❌ HTTP 에러 발생: {status_code}")
+            tprint(f"❌ HTTP 에러 발생: {status_code}")
 
         # 상세한 에러 메시지 (verbose 모드)
         if self.verbose:
             if status_code == 401:
-                print("  1. Google Cloud Console에서 YouTube Data API v3가 활성화되어 있는지 확인")
-                print("  2. API 키가 올바른지 확인")
-                print("  3. API 키에 YouTube Data API v3 접근 권한이 있는지 확인")
+                tprint("  1. Google Cloud Console에서 YouTube Data API v3가 활성화되어 있는지 확인")
+                tprint("  2. API 키가 올바른지 확인")
+                tprint("  3. API 키에 YouTube Data API v3 접근 권한이 있는지 확인")
             elif status_code == 403:
-                print("  1. API 할당량 초과 여부 확인 (Google Cloud Console)")
-                print("  2. 결제 계정이 연결되어 있는지 확인")
-                print("  3. API 키의 제한사항 확인 (IP, Referrer 등)")
+                tprint("  1. API 할당량 초과 여부 확인 (Google Cloud Console)")
+                tprint("  2. 결제 계정이 연결되어 있는지 확인")
+                tprint("  3. API 키의 제한사항 확인 (IP, Referrer 등)")
             elif status_code == 404:
-                print("  1. 채널 ID 또는 비디오 ID가 올바른지 확인")
-                print("  2. 삭제되었거나 비공개 처리된 리소스일 수 있음")
+                tprint("  1. 채널 ID 또는 비디오 ID가 올바른지 확인")
+                tprint("  2. 삭제되었거나 비공개 처리된 리소스일 수 있음")
             else:
-                print(f"   메시지: {error}")
+                tprint(f"   메시지: {error}")
 
             # API 응답 메시지 출력
             try:
                 error_data = response.json()
                 if "error" in error_data:
                     error_info = error_data["error"]
-                    print(f"\n   API 에러 메시지:")
-                    print(f"   - Code: {error_info.get('code')}")
-                    print(f"   - Message: {error_info.get('message')}")
+                    tprint(f"\n   API 에러 메시지:")
+                    tprint(f"   - Code: {error_info.get('code')}")
+                    tprint(f"   - Message: {error_info.get('message')}")
                     if "errors" in error_info:
                         for err in error_info["errors"]:
-                            print(f"   - Reason: {err.get('reason')}")
+                            tprint(f"   - Reason: {err.get('reason')}")
             except (ValueError, KeyError, TypeError):
                 pass
 
@@ -1359,11 +1364,11 @@ class YouTubeAPIWrapper:
 
             action = "생성" if created else "업데이트"
             if self.verbose:
-                print(f"  💾 채널 DB {action}: {channel.channel_title}")
+                tprint(f"  💾 채널 DB {action}: {channel.channel_title}")
 
         except Exception as e:
             if self.verbose:
-                print(f"  ⚠️  채널 DB 저장 실패: {e}")
+                tprint(f"  ⚠️  채널 DB 저장 실패: {e}")
 
     def _save_videos_to_db(self, videos: List[Dict], channel_info: Dict) -> None:
         """
@@ -1424,11 +1429,11 @@ class YouTubeAPIWrapper:
                     updated_count += 1
 
             if self.verbose:
-                print(f"  💾 영상 DB 저장 완료: 신규 {created_count}개, 업데이트 {updated_count}개")
+                tprint(f"  💾 영상 DB 저장 완료: 신규 {created_count}개, 업데이트 {updated_count}개")
 
         except Exception as e:
             if self.verbose:
-                print(f"  ⚠️  영상 DB 저장 실패: {e}")
+                tprint(f"  ⚠️  영상 DB 저장 실패: {e}")
             import traceback
             traceback.print_exc()
 
@@ -1447,7 +1452,7 @@ class YouTubeAPIWrapper:
             channel_id = video_info.get('channel_id')
             if not channel_id:
                 if self.verbose:
-                    print(f"  ⚠️  영상에 채널 정보가 없습니다: {video_info.get('video_id')}")
+                    tprint(f"  ⚠️  영상에 채널 정보가 없습니다: {video_info.get('video_id')}")
                 return
 
             # 채널이 DB에 있는지 확인, 없으면 기본 정보로 생성
@@ -1459,7 +1464,7 @@ class YouTubeAPIWrapper:
             )
 
             if created and self.verbose:
-                print(f"  💾 채널 DB 생성: {channel.channel_title}")
+                tprint(f"  💾 채널 DB 생성: {channel.channel_title}")
 
             # 날짜 파싱 (naive datetime으로 변환)
             published_at = None
@@ -1492,11 +1497,11 @@ class YouTubeAPIWrapper:
 
             action = "생성" if created else "업데이트"
             if self.verbose:
-                print(f"  💾 영상 DB {action}: {video_info.get('title', '')[:50]}")
+                tprint(f"  💾 영상 DB {action}: {video_info.get('title', '')[:50]}")
 
         except Exception as e:
             if self.verbose:
-                print(f"  ⚠️  영상 DB 저장 실패: {e}")
+                tprint(f"  ⚠️  영상 DB 저장 실패: {e}")
             import traceback
             traceback.print_exc()
 
@@ -1520,15 +1525,15 @@ class YouTubeAPIWrapper:
                 video.save(update_fields=['transcript', 'transcript_language', 'transcript_status', 'updated_at'])
 
                 if self.verbose:
-                    print(f"  💾 자막 DB 저장 완료: {video.title[:50]}")
+                    tprint(f"  💾 자막 DB 저장 완료: {video.title[:50]}")
 
             except YouTubeVideo.DoesNotExist:
                 if self.verbose:
-                    print(f"  ⚠️  비디오를 찾을 수 없습니다 (DB에 없음): {video_id}")
+                    tprint(f"  ⚠️  비디오를 찾을 수 없습니다 (DB에 없음): {video_id}")
 
         except Exception as e:
             if self.verbose:
-                print(f"  ⚠️  자막 DB 저장 실패: {e}")
+                tprint(f"  ⚠️  자막 DB 저장 실패: {e}")
                 import traceback
                 traceback.print_exc()
 
@@ -1547,23 +1552,25 @@ class YouTubeAPIWrapper:
                 video.save(update_fields=['transcript_status', 'updated_at'])
 
                 if self.verbose:
-                    print(f"  💾 자막 상태 저장: {status}")
+                    tprint(f"  💾 자막 상태 저장: {status}")
 
             except YouTubeVideo.DoesNotExist:
                 if self.verbose:
-                    print(f"  ⚠️  비디오를 찾을 수 없습니다 (DB에 없음): {video_id}")
+                    tprint(f"  ⚠️  비디오를 찾을 수 없습니다 (DB에 없음): {video_id}")
 
         except Exception as e:
             if self.verbose:
-                print(f"  ⚠️  자막 상태 저장 실패: {e}")
+                tprint(f"  ⚠️  자막 상태 저장 실패: {e}")
 
     def _print_api_call_summary(self) -> None:
         """
         API 호출 횟수 요약 출력
         """
         if self.verbose:
-            print("\n" + "="*80)
-            print(f"📊 YouTube API 호출 요약")
-            print("="*80)
-            print(f"총 API 호출 횟수: {self.api_call_count}회")
-            print("="*80 + "\n")
+            tprint()
+            tprint_separator("=", 80)
+            tprint(f"📊 YouTube API 호출 요약")
+            tprint_separator("=", 80)
+            tprint(f"총 API 호출 횟수: {self.api_call_count}회")
+            tprint_separator("=", 80)
+            tprint()
