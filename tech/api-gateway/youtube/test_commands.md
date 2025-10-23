@@ -180,7 +180,7 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_save_all_channe
 - 이미 시도한 영상은 자동으로 건너뛰기 (성공/실패 모두)
 - 자막 조회 결과를 DB에 저장 (성공, 자막 없음, 비활성화 등)
 - 진행 상황을 실시간으로 출력 (예: [1/23])
-- 각 요청 후 5~10초 랜덤 대기 (IP 블락 방지)
+- 각 요청 후 180~300초 랜덤 대기 (IP 블락 방지)
 - YouTube IP 블락 감지 시 자동 중단
 - 최종 통계 출력 (성공/실패/건너뛰기)
 
@@ -201,6 +201,66 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_save_all_channe
 - 한 번 시도한 영상은 다시 시도하지 않음 (실패해도)
 - YouTube API 할당량을 소비하지 않음 (youtube-transcript-api 사용)
 
+
+## 채널 텍스트 데이터 JSON 내보내기
+```bash
+# 자막이 있는 영상만 내보내기 (핸들 사용)
+docker exec royt-royt-api-gateway-1 ./manage.py export_channel_transcripts --channel @떠들썩 --only-with-transcript
+
+# 모든 영상 내보내기 (채널 ID 사용)
+docker exec royt-royt-api-gateway-1 ./manage.py export_channel_transcripts --channel UCPF2WvEWPP-1utUwwsdbeCw
+
+# 특정 디렉토리에 저장
+docker exec royt-royt-api-gateway-1 ./manage.py export_channel_transcripts --channel @떠들썩 --output-dir /usr/data/exports --only-with-transcript
+```
+
+**기능:**
+- 특정 채널의 모든 영상 텍스트 데이터를 JSON 파일로 내보내기
+- 제목, 원본 자막, 메타데이터 포함
+- 채널 정보도 함께 저장
+- 타임스탬프가 포함된 파일명으로 자동 저장
+
+**옵션:**
+- `--channel <채널ID|@핸들>`: 내보낼 채널 ID 또는 핸들 (필수)
+- `--output-dir <경로>`: JSON 파일을 저장할 디렉토리 (기본값: /usr/data/roytlocal/)
+- `--only-with-transcript`: 자막이 있는 영상만 내보내기
+
+**출력 파일 구조:**
+```json
+{
+  "channel": {
+    "channel_id": "...",
+    "channel_title": "떠들썩",
+    "subscriber_count": ...,
+    ...
+  },
+  "export_info": {
+    "exported_at": "2025-10-23T...",
+    "total_videos": 50,
+    "only_with_transcript": true
+  },
+  "videos": [
+    {
+      "video_id": "...",
+      "title": "영상 제목",
+      "description": "...",
+      "transcript": "원본 자막...",
+      "youtube_url": "https://www.youtube.com/watch?v=...",
+      "published_at": "...",
+      "view_count": ...,
+      "like_count": ...,
+      "tags": [...],
+      ...
+    }
+  ]
+}
+```
+
+**파일명 형식:**
+- `채널명_YYYYMMDD_HHMMSS.json`
+- 예: `떠들썩_20251023_143022.json`
+
+---
 
 ## yt-dlp
 docker exec royt-royt-api-gateway-1 yt-dlp --write-auto-sub --write-subs --sub-lang ko --sub-format vtt --skip-download "https://www.youtube.com/watch?v=6JYx7wGO5qQ"
