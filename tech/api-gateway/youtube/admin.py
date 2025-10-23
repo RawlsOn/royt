@@ -13,8 +13,8 @@ class YouTubeChannelAdmin(admin.ModelAdmin):
 
 @admin.register(YouTubeVideo)
 class YouTubeVideoAdmin(admin.ModelAdmin):
-    list_display = ('title', 'channel', 'view_count', 'like_count', 'comment_count', 'transcript_status', 'transcript_language', 'published_at', 'created_at')
-    list_filter = ('transcript_status', 'category_id', 'created_date', 'published_at')
+    list_display = ('title', 'channel', 'view_count', 'like_count', 'comment_count', 'transcript_status', 'refined_transcript_status', 'transcript_language', 'published_at', 'created_at')
+    list_filter = ('transcript_status', 'refined_transcript_status', 'category_id', 'created_date', 'published_at')
     search_fields = ('title', 'video_id', 'channel__channel_title')
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('-view_count',)
