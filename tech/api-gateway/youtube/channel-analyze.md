@@ -10,3 +10,7 @@ docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_save_recent_cha
 **IP block 위험이 있으므로 아이폰 테더링으로 진행할 것**
 docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_save_all_channel_video_transcripts @살림남
 
+## 영상 정보 저장
+docker exec royt-royt-api-gateway-1 ./manage.py save_channel_video_details @살림남
+
+

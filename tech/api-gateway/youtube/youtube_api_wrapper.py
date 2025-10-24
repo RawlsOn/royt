@@ -1562,6 +1562,225 @@ class YouTubeAPIWrapper:
             if self.verbose:
                 tprint(f"  ⚠️  자막 상태 저장 실패: {e}")
 
+    def save_channel_video_details(self, channel_identifier: str) -> Dict:
+        """
+        특정 채널의 모든 비디오에 대해 상세 정보를 조회하고 저장
+        이미 상세 정보가 있는 비디오(view_count > 0)는 건너뜀
+
+        Args:
+            channel_identifier: 유튜브 채널 ID 또는 핸들 (@username 형태)
+
+        Returns:
+            처리 결과 딕셔너리
+            {
+                'total_videos': int,  # 전체 비디오 수
+                'skipped': int,  # 이미 상세 정보가 있어서 건너뛴 수
+                'processed': int,  # 새로 처리한 수
+                'failed': int,  # 실패한 수
+                'api_calls': int,  # 사용한 API 호출 수
+            }
+        """
+        if self.verbose:
+            tprint()
+            tprint_separator("=", 80)
+            tprint(f"📹 채널 비디오 상세 정보 저장 시작")
+            tprint(f"   채널: {channel_identifier}")
+            tprint_separator("=", 80)
+            tprint()
+
+        # 1. 채널 정보 확인
+        try:
+            channel = YouTubeChannel.objects.get(
+                channel_id=channel_identifier if not channel_identifier.startswith('@')
+                else YouTubeChannel.objects.filter(channel_custom_url__icontains=channel_identifier[1:]).first().channel_id
+            )
+        except Exception as e:
+            if self.verbose:
+                tprint(f"❌ 채널을 찾을 수 없습니다: {channel_identifier}")
+                tprint(f"   오류: {e}")
+            return {
+                'total_videos': 0,
+                'skipped': 0,
+                'processed': 0,
+                'failed': 0,
+                'api_calls': 0
+            }
+
+        # 2. 해당 채널의 모든 비디오 조회
+        all_videos = YouTubeVideo.objects.filter(channel=channel)
+        total_count = all_videos.count()
+
+        # 3. 상세 정보가 없는 비디오만 필터링 (view_count가 0인 것들)
+        videos_to_process = all_videos.filter(view_count=0)
+        to_process_count = videos_to_process.count()
+        skipped_count = total_count - to_process_count
+
+        if self.verbose:
+            tprint(f"📊 비디오 분석:")
+            tprint(f"   전체 비디오: {total_count}개")
+            tprint(f"   상세 정보 필요: {to_process_count}개")
+            tprint(f"   건너뛸 비디오: {skipped_count}개 (이미 상세 정보 있음)")
+            tprint()
+
+        if to_process_count == 0:
+            if self.verbose:
+                tprint("✅ 모든 비디오가 이미 상세 정보를 가지고 있습니다.")
+                self._print_api_call_summary()
+            return {
+                'total_videos': total_count,
+                'skipped': skipped_count,
+                'processed': 0,
+                'failed': 0,
+                'api_calls': 0
+            }
+
+        # 4. 비디오 ID 목록 생성
+        video_ids = list(videos_to_process.values_list('video_id', flat=True))
+
+        processed_count = 0
+        failed_count = 0
+
+        if self.verbose:
+            tprint(f"🔄 상세 정보 조회 시작...")
+            tprint()
+
+        # 5. 50개씩 배치 처리 (YouTube API 제한)
+        batch_size = 50
+        for i in range(0, len(video_ids), batch_size):
+            batch_ids = video_ids[i:i+batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (len(video_ids) + batch_size - 1) // batch_size
+
+            if self.verbose:
+                tprint(f"📦 배치 {batch_num}/{total_batches} 처리 중 ({len(batch_ids)}개 비디오)...")
+
+            # API 호출 전 랜덤 대기 (3-5초)
+            if i > 0:  # 첫 번째 배치는 대기하지 않음
+                delay = random.uniform(3, 5)
+                if self.verbose:
+                    tprint(f"   ⏱️  {delay:.1f}초 대기 중...")
+                time.sleep(delay)
+
+            # 비디오 상세 정보 조회
+            try:
+                video_details = self._get_video_details_for_save(batch_ids)
+
+                # 각 비디오 정보 업데이트
+                for video_id, details in video_details.items():
+                    try:
+                        video = YouTubeVideo.objects.get(video_id=video_id)
+                        video.view_count = details.get('view_count', 0)
+                        video.like_count = details.get('like_count', 0)
+                        video.comment_count = details.get('comment_count', 0)
+                        video.category_id = details.get('category_id', '')
+                        video.tags = details.get('tags', [])
+                        video.save()
+                        processed_count += 1
+
+                        if self.verbose:
+                            tprint(f"   ✅ {video.title[:50]}... (조회수: {video.view_count:,})")
+                    except Exception as e:
+                        failed_count += 1
+                        if self.verbose:
+                            tprint(f"   ❌ DB 저장 실패 (video_id: {video_id}): {e}")
+
+            except Exception as e:
+                failed_count += len(batch_ids)
+                if self.verbose:
+                    tprint(f"   ❌ API 호출 실패: {e}")
+
+            if self.verbose:
+                tprint()
+
+        # 6. 결과 출력
+        if self.verbose:
+            tprint_separator("=", 80)
+            tprint(f"✅ 채널 비디오 상세 정보 저장 완료")
+            tprint_separator("=", 80)
+            tprint(f"전체 비디오: {total_count}개")
+            tprint(f"건너뛴 비디오: {skipped_count}개")
+            tprint(f"처리 성공: {processed_count}개")
+            tprint(f"처리 실패: {failed_count}개")
+            tprint_separator("=", 80)
+            tprint()
+
+            self._print_api_call_summary()
+
+        return {
+            'total_videos': total_count,
+            'skipped': skipped_count,
+            'processed': processed_count,
+            'failed': failed_count,
+            'api_calls': self.api_call_count
+        }
+
+    def _get_video_details_for_save(self, video_ids: List[str]) -> Dict[str, Dict]:
+        """
+        비디오 상세 정보 조회 (저장용 - 더 많은 정보 포함)
+
+        Args:
+            video_ids: 비디오 ID 리스트 (최대 50개)
+
+        Returns:
+            {video_id: {view_count, like_count, comment_count, category_id, tags}} 형태의 딕셔너리
+        """
+        if not video_ids:
+            return {}
+
+        # 최대 50개씩만 처리
+        if len(video_ids) > 50:
+            if self.verbose:
+                tprint(f"⚠️  경고: 한 번에 최대 50개의 비디오만 처리 가능합니다. (요청: {len(video_ids)}개)")
+            video_ids = video_ids[:50]
+
+        url = f"{self.BASE_URL}/videos"
+        params = {
+            "part": "statistics,snippet",
+            "id": ",".join(video_ids),
+            "key": self.api_key
+        }
+
+        details_map = {}
+
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            # API 호출 횟수 증가
+            self.api_call_count += 1
+
+            # 원본 API 응답 출력 (verbose 모드)
+            if self.verbose:
+                tprint()
+                tprint_separator("=", 80)
+                tprint("📡 YouTube API 원본 응답 (videos - full details)")
+                tprint_separator("=", 80)
+                tprint(json.dumps(data, indent=2, ensure_ascii=False))
+                tprint_separator("=", 80)
+                tprint()
+
+            for item in data.get("items", []):
+                video_id = item.get("id")
+                statistics = item.get("statistics", {})
+                snippet = item.get("snippet", {})
+
+                details_map[video_id] = {
+                    "view_count": int(statistics.get("viewCount", 0)),
+                    "like_count": int(statistics.get("likeCount", 0)),
+                    "comment_count": int(statistics.get("commentCount", 0)),
+                    "category_id": snippet.get("categoryId", ""),
+                    "tags": snippet.get("tags", [])
+                }
+
+        except requests.exceptions.HTTPError as e:
+            self.api_call_count += 1
+            self._handle_http_error(e, response)
+        except requests.exceptions.RequestException as e:
+            tprint(f"YouTube API 요청 실패: {e}")
+
+        return details_map
+
     def _print_api_call_summary(self) -> None:
         """
         API 호출 횟수 요약 출력
