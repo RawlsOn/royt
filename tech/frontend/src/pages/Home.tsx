@@ -1,89 +1,61 @@
-import { Link } from 'react-router-dom';
+import { Box, Container, Typography, Paper } from '@mui/material';
 import { env } from '@/config/env';
+import { useHomeStore } from '@/store/homeStore';
+import TabNavigation from '@/components/home/TabNavigation';
+import ChannelList from '@/components/home/ChannelList';
+import KeywordInput from '@/components/home/KeywordInput';
+import Settings from '@/components/home/Settings';
+import ResultsView from '@/components/home/ResultsView';
+import ActionBar from '@/components/home/ActionBar';
 
 export default function Home() {
+  const { activeTab } = useHomeStore();
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'channels':
+        return <ChannelList />;
+      case 'keywords':
+        return <KeywordInput />;
+      case 'settings':
+        return <Settings />;
+      case 'results':
+        return <ResultsView />;
+      default:
+        return <ChannelList />;
+    }
+  };
+
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>{env.serviceName}</h1>
-      <p style={styles.description}>
-        YouTube 채널 및 인기 급상승 영상 관리 시스템
-      </p>
+    <Box sx={{ pb: 10 }}>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        {/* 헤더 */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 3,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+          }}
+        >
+          <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+            YouTube Hot Finder
+          </Typography>
+          <Typography variant="subtitle1">
+            {env.serviceName} - 유튜브 채널 및 인기 급상승 영상 관리 시스템
+          </Typography>
+        </Paper>
 
-      <div style={styles.features}>
-        <div style={styles.card}>
-          <h3>⚛️ React 19</h3>
-          <p>Latest version of React with modern features</p>
-        </div>
-        <div style={styles.card}>
-          <h3>⚡ Vite</h3>
-          <p>Lightning fast HMR and build times</p>
-        </div>
-        <div style={styles.card}>
-          <h3>📘 TypeScript</h3>
-          <p>Type-safe development experience</p>
-        </div>
-        <div style={styles.card}>
-          <h3>🔒 JWT Auth</h3>
-          <p>Secure authentication with JWT tokens</p>
-        </div>
-        <div style={styles.card}>
-          <h3>🐳 Docker</h3>
-          <p>Containerized development and deployment</p>
-        </div>
-        <div style={styles.card}>
-          <h3>🎨 Django API</h3>
-          <p>RESTful API with Django backend</p>
-        </div>
-      </div>
+        {/* 탭 네비게이션 */}
+        <TabNavigation />
 
-      <div style={styles.actions}>
-        <Link to="/login" style={styles.button}>
-          Get Started
-        </Link>
-      </div>
-    </div>
+        {/* 탭 컨텐츠 */}
+        <Box sx={{ minHeight: '60vh' }}>{renderTabContent()}</Box>
+      </Container>
+
+      {/* 하단 액션 바 */}
+      <ActionBar />
+    </Box>
   );
 }
-
-const styles = {
-  container: {
-    textAlign: 'center' as const,
-  },
-  title: {
-    fontSize: '3rem',
-    marginBottom: '1rem',
-    background: 'linear-gradient(to right, #646cff, #747bff)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-  },
-  description: {
-    fontSize: '1.2rem',
-    color: '#888',
-    marginBottom: '3rem',
-  },
-  features: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '1.5rem',
-    marginBottom: '3rem',
-  },
-  card: {
-    padding: '2rem',
-    backgroundColor: '#1a1a1a',
-    borderRadius: '8px',
-    border: '1px solid #333',
-  },
-  actions: {
-    marginTop: '2rem',
-  },
-  button: {
-    display: 'inline-block',
-    padding: '0.75rem 2rem',
-    backgroundColor: '#646cff',
-    color: '#fff',
-    textDecoration: 'none',
-    borderRadius: '8px',
-    fontSize: '1.1rem',
-    transition: 'background-color 0.2s',
-  },
-};

@@ -1,30 +1,29 @@
 import { Outlet } from 'react-router-dom';
+import { Box } from '@mui/material';
 import Header from './Header';
 import Footer from './Footer';
 
 export default function MainLayout() {
   return (
-    <div style={styles.container}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+      }}
+    >
       <Header />
-      <main style={styles.main}>
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          width: '100%',
+        }}
+      >
         <Outlet />
-      </main>
+      </Box>
       <Footer />
-    </div>
+    </Box>
   );
 }
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    minHeight: '100vh',
-  },
-  main: {
-    flex: 1,
-    maxWidth: '1200px',
-    width: '100%',
-    margin: '0 auto',
-    padding: '2rem 1rem',
-  },
-};
