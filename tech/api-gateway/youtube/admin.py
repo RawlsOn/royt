@@ -1,5 +1,5 @@
 from django.contrib import admin
-from youtube.models import YouTubeChannel, YouTubeVideo, YouTubeVideoStatHistory
+from youtube.models import YouTubeChannel, YouTubeVideo, YouTubeVideoStatHistory, YouTubeVideoCategory
 
 
 @admin.register(YouTubeChannel)
@@ -30,3 +30,12 @@ class YouTubeVideoStatHistoryAdmin(admin.ModelAdmin):
     readonly_fields = ('snapshot_at',)
     ordering = ('-snapshot_at',)
     raw_id_fields = ('video',)
+
+
+@admin.register(YouTubeVideoCategory)
+class YouTubeVideoCategoryAdmin(admin.ModelAdmin):
+    list_display = ('category_id', 'category_title', 'region_code', 'assignable', 'updated_at')
+    list_filter = ('region_code', 'assignable')
+    search_fields = ('category_id', 'category_title')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('region_code', 'category_id')

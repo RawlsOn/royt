@@ -945,6 +945,98 @@ class YouTubeAPIWrapper:
 
         return videos
 
+    def get_video_categories(
+        self,
+        region_code: str = "KR"
+    ) -> List[Dict]:
+        """
+        비디오 카테고리 목록 조회
+
+        Args:
+            region_code: 국가 코드 (기본값: 'KR')
+
+        Returns:
+            카테고리 정보 리스트
+            [
+                {
+                    'category_id': str,
+                    'category_title': str,
+                    'assignable': bool,
+                    'region_code': str,
+                },
+                ...
+            ]
+        """
+        url = f"{self.BASE_URL}/videoCategories"
+        params = {
+            "part": "snippet",
+            "regionCode": region_code,
+            "key": self.api_key
+        }
+
+        categories = []
+
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            # API 호출 횟수 증가
+            self.api_call_count += 1
+
+            # 원본 API 응답 출력 (verbose 모드)
+            if self.verbose:
+                tprint()
+                tprint_separator("=", 80)
+                tprint("📡 YouTube API 원본 응답 (videoCategories)")
+                tprint_separator("=", 80)
+                tprint(json.dumps(data, indent=2, ensure_ascii=False))
+                tprint_separator("=", 80)
+                tprint()
+
+            items = data.get("items", [])
+            if not items:
+                if self.verbose:
+                    tprint(f"카테고리를 찾을 수 없습니다: {region_code}")
+                self._print_api_call_summary()
+                return []
+
+            # 카테고리 정보 파싱
+            for item in items:
+                snippet = item.get("snippet", {})
+
+                category_info = {
+                    "category_id": item.get("id"),
+                    "category_title": snippet.get("title", ""),
+                    "assignable": snippet.get("assignable", True),
+                    "region_code": region_code,
+                }
+
+                categories.append(category_info)
+
+                # DB에 저장
+                if self.save_to_db:
+                    self._save_category_to_db(category_info)
+
+            # 간단한 요약 출력
+            if not self.verbose:
+                tprint(f"✅ 카테고리 조회 완료: {len(categories)}개 (지역: {region_code})")
+
+            # API 호출 요약 출력
+            self._print_api_call_summary()
+
+            return categories
+
+        except requests.exceptions.HTTPError as e:
+            self.api_call_count += 1
+            self._handle_http_error(e, response)
+            self._print_api_call_summary()
+            return []
+        except requests.exceptions.RequestException as e:
+            tprint(f"YouTube API 요청 실패: {e}")
+            self._print_api_call_summary()
+            return []
+
     def get_video_transcript(
         self,
         video_id: str,
@@ -1706,6 +1798,34 @@ class YouTubeAPIWrapper:
         except Exception as e:
             if self.verbose:
                 tprint(f"  ⚠️  자막 상태 저장 실패: {e}")
+
+    def _save_category_to_db(self, category_info: Dict) -> None:
+        """
+        카테고리 정보를 DB에 저장 (update or create)
+
+        Args:
+            category_info: 카테고리 정보 딕셔너리
+        """
+        try:
+            from youtube.models import YouTubeVideoCategory
+
+            # 카테고리 저장 또는 업데이트
+            category, created = YouTubeVideoCategory.objects.update_or_create(
+                category_id=category_info['category_id'],
+                region_code=category_info['region_code'],
+                defaults={
+                    'category_title': category_info['category_title'],
+                    'assignable': category_info.get('assignable', True),
+                }
+            )
+
+            action = "생성" if created else "업데이트"
+            if self.verbose:
+                tprint(f"  💾 카테고리 DB {action}: [{category.region_code}] {category.category_title}")
+
+        except Exception as e:
+            if self.verbose:
+                tprint(f"  ⚠️  카테고리 DB 저장 실패: {e}")
 
     def save_channel_video_details(self, channel_identifier: str) -> Dict:
         """
