@@ -62,6 +62,7 @@ urlpatterns = [
     path('api/', include('config.urls')),
     # path('api/', include('user.urls')),
     path('api/', include('main.urls')),
+    path('api/', include('youtube.urls')),
 
     # path('api/', include('dorogglinecore.urls')),
     # path('api/', include('doroggareacore.urls')),
