@@ -14,17 +14,9 @@ YouTube API 래퍼 클래스의 기능을 테스트하기 위한 Django 관리 �
 
 ## 채널 정보 조회
 ```bash
-# 채널 ID로 조회
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_channel_info UC_x5XG1OV2P6uZZ5FSM9Ttw
-
 # 채널 핸들로 조회
 docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_channel_info @살림남
 
-# 상세 로그와 함께 조회
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_channel_info @떠들썩 --verbose
-
-# DB에 저장하지 않고 조회
-docker exec royt-royt-api-gateway-1 ./manage.py test_youtube_api_get_channel_info @떠들썩 --no-db
 ```
 
 ## 채널 영상 목록 조회
