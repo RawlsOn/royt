@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import Home from '@/pages/Home';
+import Landing from '@/pages/Landing';
+import Finder from '@/pages/Finder';
 import NotFound from '@/pages/NotFound';
 
 /**
@@ -13,7 +14,11 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Home />,
+        element: <Landing />,
+      },
+      {
+        path: 'finder',
+        element: <Finder />,
       },
       {
         path: '404',
