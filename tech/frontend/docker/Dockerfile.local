@@ -1,0 +1,24 @@
+FROM node:20-alpine
+MAINTAINER Intersources Inc.
+
+# Accept build argument for port
+ARG FE_PORT=5101
+
+# Set timezone
+ENV TZ=Asia/Seoul
+
+# Set work directory
+WORKDIR /usr/src/frontend
+
+# Install dependencies first (for caching)
+COPY package*.json ./
+RUN npm install
+
+# Copy project files
+COPY . .
+
+# Expose port from argument
+EXPOSE ${FE_PORT}
+
+# Start development server with host binding for Docker
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

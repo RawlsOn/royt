@@ -16,58 +16,28 @@ services:
     env_file:
       - .env
 
-  #### 프론트 첫 설치시
-  #### entrypoint.local.sh서에서 tail -f 로 넣고 들어가서 npm install
-  ### 해야 함 : front$ mkdir -p ./node_modules/quasar/dist/ssr-directives/; cp ./docker/patch/* ./node_modules/quasar/dist/ssr-directives/
-
-  # tojimetric-front:
-  #   build:
-  #     context: ./../front
-  #     dockerfile: docker/Dockerfile.local
-  #   # command: quasar dev -m ssr
-  #   # command: quasar dev
-  #   # command: tail -f /dev/null
-  #   volumes:
-  #     - ./../front:/usr/src/front/
-  #     - ${DATA_DIR}:/usr/data/
-  #     - ${LOG_DIR}:/usr/log/
-  #   ports:
-  #     - ${LOCAL_FE_PORT}:${LOCAL_FE_PORT}
-  #     # - 24678:26878 # vite websocket for HMR?
-  #   env_file:
-  #     - .env
-  #   restart: always
-
-  # front-konsta:
-  #   build:
-  #     context: ./../front-konsta
-  #     dockerfile: docker/Dockerfile.local
-  #   # command: quasar dev -m ssr
-  #   # command: quasar dev
-  #   # command: tail -f /dev/null
-  #   volumes:
-  #     - ./../front-konsta:/usr/src/front-konsta/
-  #     - ${DATA_DIR}:/usr/data/
-  #     - ${LOG_DIR}:/usr/log/
-  #   ports:
-  #     - 7113:5173
-  #     # - 24678:26878 # vite websocket for HMR?
-  #   env_file:
-  #     - .env
-  #   restart: always
-
-  # front-build: # 개발 서버에서처럼 빌드하고 싶을 때
-  #   build:
-  #     context: ./../front
-  #     dockerfile: docker/Dockerfile.dev
-  #   volumes:
-  #     - ./../front:/usr/src/front/
-  #   ports:
-  #     - ${LOCAL_FE_PORT}:8080
-  #     # - 24678:26878 # vite websocket for HMR?
-  #   env_file:
-  #     - .env
-  #   restart: always
+  royt-frontend:
+    build:
+      context: ./../frontend
+      dockerfile: docker/Dockerfile.local
+      args:
+        - PROJECT_NAME=$PROJECT_NAME
+        - FE_PORT=${FE_PORT}
+    command: sh -c "npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./../frontend:/usr/src/frontend
+      - /usr/src/frontend/node_modules
+    ports:
+      - ${FE_PORT}:${FE_PORT}
+    env_file:
+      - .env
+    environment:
+      - VITE_API_BASE_URL=${BE_URL}/api
+      - VITE_ENV=${RUNNING_ENV}
+      - VITE_SERVICE_NAME=${SERVICE_NAME}
+      - VITE_PORT=${FE_PORT}
+    depends_on:
+      - royt-api-gateway
 
 volumes:
   static_volume:
