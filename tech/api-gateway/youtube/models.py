@@ -5,6 +5,40 @@ from django.db import models
 from base.models import RoBase
 
 
+class YouTubeVideoCategory(RoBase):
+    """YouTube 비디오 카테고리 정보"""
+
+    category_id = models.CharField(
+        max_length=10,
+        verbose_name="카테고리 ID"
+    )
+    category_title = models.CharField(
+        max_length=100,
+        verbose_name="카테고리 이름"
+    )
+    assignable = models.BooleanField(
+        default=True,
+        verbose_name="영상 할당 가능 여부"
+    )
+    region_code = models.CharField(
+        max_length=2,
+        db_index=True,
+        verbose_name="국가 코드"
+    )
+
+    class Meta:
+        ordering = ['region_code', 'category_id']
+        verbose_name = "YouTube 비디오 카테고리"
+        verbose_name_plural = "YouTube 비디오 카테고리"
+        unique_together = [['category_id', 'region_code']]
+        indexes = [
+            models.Index(fields=['region_code', 'category_id']),
+        ]
+
+    def __str__(self):
+        return f"[{self.region_code}] {self.category_title} (ID: {self.category_id})"
+
+
 class YouTubeChannel(RoBase):
     """YouTube 채널 정보"""
 
