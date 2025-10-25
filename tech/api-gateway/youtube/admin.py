@@ -4,11 +4,12 @@ from youtube.models import YouTubeChannel, YouTubeVideo, YouTubeVideoStatHistory
 
 @admin.register(YouTubeChannel)
 class YouTubeChannelAdmin(admin.ModelAdmin):
-    list_display = ('channel_title', 'subscriber_count', 'video_count', 'view_count', 'channel_country', 'updated_at')
-    list_filter = ('channel_country', 'created_date')
+    list_display = ('channel_title', 'subscriber_count', 'video_count', 'view_count', 'channel_country', 'is_excluded', 'updated_at')
+    list_filter = ('is_excluded', 'channel_country', 'created_date')
     search_fields = ('channel_title', 'channel_id', 'channel_custom_url')
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('-subscriber_count',)
+    list_editable = ('is_excluded',)
 
 
 @admin.register(YouTubeVideo)

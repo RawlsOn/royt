@@ -107,6 +107,27 @@ class Command(BaseCommand):
             )
             return
 
+        # 제외된 채널 필터링
+        excluded_channels = set(
+            YouTubeChannel.objects.filter(is_excluded=True).values_list('channel_id', flat=True)
+        )
+
+        original_count = len(videos)
+        if excluded_channels:
+            videos = [v for v in videos if v.get('channel_id') not in excluded_channels]
+            filtered_count = original_count - len(videos)
+            if filtered_count > 0:
+                self.stdout.write(
+                    self.style.WARNING(f'   ⚠️  제외된 채널의 영상 {filtered_count}개 필터링됨')
+                )
+                self.stdout.write('')
+
+        if not videos:
+            self.stdout.write(
+                self.style.WARNING('모든 영상이 제외된 채널에 속합니다.')
+            )
+            return
+
         # DB 저장
         if options['save_db']:
             success = self.save_to_db(videos, options['save_stats'])

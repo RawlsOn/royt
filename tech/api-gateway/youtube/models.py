@@ -70,6 +70,14 @@ class YouTubeChannel(RoBase):
         verbose_name="채널 키워드"
     )
 
+    # 수집 제어
+    is_excluded = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name="수집 제외 여부",
+        help_text="True로 설정하면 인기 급상승 영상 수집 시 이 채널의 영상을 제외합니다"
+    )
+
     class Meta:
         ordering = ['-subscriber_count', '-view_count']
         verbose_name = "YouTube 채널"
