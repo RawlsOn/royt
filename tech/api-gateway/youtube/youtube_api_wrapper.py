@@ -800,6 +800,151 @@ class YouTubeAPIWrapper:
             self._print_api_call_summary()
             return None
 
+    def get_trending_videos(
+        self,
+        region_code: str = "KR",
+        category_id: Optional[str] = None,
+        max_results: int = 50
+    ) -> List[Dict]:
+        """
+        인기 급상승 영상 조회
+
+        Args:
+            region_code: 국가 코드 (기본값: 'KR')
+            category_id: 카테고리 ID (None이면 전체 카테고리)
+            max_results: 조회할 최대 영상 개수 (기본값: 50, 최대: 200)
+
+        Returns:
+            영상 정보 리스트
+            [
+                {
+                    'video_id': str,
+                    'title': str,
+                    'description': str,
+                    'channel_id': str,
+                    'channel_title': str,
+                    'published_at': str,
+                    'thumbnail_url': str,
+                    'duration': str,  # ISO 8601 형식
+                    'duration_seconds': int,  # 초 단위
+                    'is_short': bool,  # 60초 미만 여부
+                    'view_count': int,
+                    'like_count': int,
+                    'comment_count': int,
+                    'tags': List[str],
+                    'category_id': str,
+                },
+                ...
+            ]
+        """
+        # 최대 200개로 제한
+        if max_results > 200:
+            tprint(f"⚠️  최대 조회 가능 개수는 200개입니다. (요청: {max_results}개) -> 200개로 제한합니다.")
+            max_results = 200
+
+        videos = []
+        next_page_token = None
+
+        while len(videos) < max_results:
+            url = f"{self.BASE_URL}/videos"
+            params = {
+                "part": "snippet,statistics,contentDetails",
+                "chart": "mostPopular",
+                "regionCode": region_code,
+                "maxResults": min(50, max_results - len(videos)),  # 최대 50개씩
+                "key": self.api_key
+            }
+
+            # category_id가 None이 아닐 때만 추가
+            if category_id:
+                params["videoCategoryId"] = category_id
+
+            if next_page_token:
+                params["pageToken"] = next_page_token
+
+            try:
+                response = requests.get(url, params=params, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+
+                # API 호출 횟수 증가
+                self.api_call_count += 1
+
+                # 원본 API 응답 출력 (verbose 모드)
+                if self.verbose:
+                    tprint()
+                    tprint_separator("=", 80)
+                    tprint("📡 YouTube API 원본 응답 (videos - trending)")
+                    tprint_separator("=", 80)
+                    tprint(json.dumps(data, indent=2, ensure_ascii=False))
+                    tprint_separator("=", 80)
+                    tprint()
+
+                items = data.get("items", [])
+                if not items:
+                    break
+
+                # 영상 정보 파싱
+                for item in items:
+                    snippet = item.get("snippet", {})
+                    content_details = item.get("contentDetails", {})
+                    statistics = item.get("statistics", {})
+
+                    duration = content_details.get("duration", "")
+                    duration_seconds = self._parse_duration(duration)
+                    is_short = duration_seconds > 0 and duration_seconds < 60
+
+                    video_info = {
+                        "video_id": item.get("id"),
+                        "title": snippet.get("title", ""),
+                        "description": snippet.get("description", ""),
+                        "channel_id": snippet.get("channelId", ""),
+                        "channel_title": snippet.get("channelTitle", ""),
+                        "published_at": snippet.get("publishedAt", ""),
+                        "thumbnail_url": snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
+                        "duration": duration,
+                        "duration_seconds": duration_seconds,
+                        "is_short": is_short,
+                        "view_count": int(statistics.get("viewCount", 0)),
+                        "like_count": int(statistics.get("likeCount", 0)),
+                        "comment_count": int(statistics.get("commentCount", 0)),
+                        "tags": snippet.get("tags", []),
+                        "category_id": snippet.get("categoryId", ""),
+                    }
+
+                    videos.append(video_info)
+
+                    # DB에 저장
+                    if self.save_to_db:
+                        self._save_single_video_to_db(video_info)
+
+                    # max_results에 도달하면 중단
+                    if len(videos) >= max_results:
+                        break
+
+                # 다음 페이지 확인
+                next_page_token = data.get("nextPageToken")
+                if not next_page_token:
+                    break
+
+            except requests.exceptions.HTTPError as e:
+                self.api_call_count += 1
+                self._handle_http_error(e, response)
+                break
+            except requests.exceptions.RequestException as e:
+                tprint(f"YouTube API 요청 실패: {e}")
+                break
+
+        # 간단한 요약 출력
+        if not self.verbose:
+            category_msg = f" (카테고리: {category_id})" if category_id else ""
+            tprint(f"✅ 인기 급상승 영상 조회 완료: {len(videos)}개 (지역: {region_code}{category_msg})")
+
+        # API 호출 요약 출력
+        self._print_api_call_summary()
+
+        return videos
+
     def get_video_transcript(
         self,
         video_id: str,
